@@ -20,10 +20,10 @@ class RepBot(irc.IRCClient):
 									 else "data/reps.txt")
 		self.ignorelist = set((self.cfg.get("RepBot","ignore")
 					if self.cfg.has_option("RepBot","ignore")
-					else "").split(','))
+					else "").split())
 		self.admins = set((self.cfg.get("RepBot","admins")
 					if self.cfg.has_option("RepBot","admins")
-					else "").split(','))
+					else "").split())
 		self.privonly = False
 		self.autorespond = False
 
