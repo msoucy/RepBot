@@ -1,16 +1,12 @@
 #!/usr/bin/python
 
-# TODO: Detect renames for admins, users, and ignored
-# TODO: Enable timed reports again
-# TODO: Forcing a print resets the timer
-
 import sys, ConfigParser
 from twisted.words.protocols import irc
 from twisted.internet import protocol, reactor, ssl
 from repsys import ReputationSystem
 
 def getNameFromIdent(name):
-	return name[:name.find('!')] if '!' in name else name
+	return name.partition("!")[0]
 
 class RepBot(irc.IRCClient):
 	def _get_nickname(self):
@@ -56,7 +52,7 @@ class RepBot(irc.IRCClient):
 			print "Rep file dumped"
 		elif command == "filter":
 			self.reps.filter()
-			self.admin(user,["all"])
+			self.admin(user,"all")
 		elif command == "clear":
 			for name in args:
 				self.reps.clear(name)
