@@ -49,10 +49,10 @@ class ReputationSystem(object):
 		ret = ""
 		if highest != self.cached[0]:
 			ret += "Top reps: {0}\n".format(highest)
-			cached[0] = highest
+			self.cached[0] = highest
 		if lowest != self.cached[1]:
 			ret += "Bottom reps: {0}\n".format(lowest)
-			cached[1] = lowest
+			self.cached[1] = lowest
 		return ret.strip()
 	
 	def tell(self, name):
