@@ -4,9 +4,9 @@
 # TODO: Enable timed reports again
 # TODO: Forcing a print resets the timer
 
-import sys
+import sys, ConfigParser
 from twisted.words.protocols import irc
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, ssl
 from repsys import ReputationSystem
 
 def getNameFromIdent(name):
@@ -34,7 +34,6 @@ class RepBot(irc.IRCClient):
 
 	def joined(self, channel):
 		print "Joined {0}.".format(channel)
-        
 	
 	def admin(self, user, msg):
 		if not msg.strip(): return
@@ -86,7 +85,8 @@ class RepBot(irc.IRCClient):
 			self.msg(channel, self.reps.report())
 		elif command == "apply":
 			self.reps.update(eval("".join(args)))
-		elif command == "term":
+		elif command == "term" and len(args) > 1:
+			self.part(args[0], " ".join(args[1:]))
 			sys.exit(0)
 		else:
 			print "Invalid command {0}".format(command)
@@ -158,7 +158,18 @@ class RepBotFactory(protocol.ClientFactory):
 		print "Could not connect: %s" % (reason,)
 
 if __name__ == "__main__":
-	reactor.connectTCP('irc.freenode.net', 6667, RepBotFactory('#repbottesting'))
+	cfg = ConfigParser.RawConfigParser()
+	cfg.read("data/settings.txt")
+	server = cfg.get("RepBot","server") if cfg.has_option("RepBot","server") else ""
+	port = cfg.getint("RepBot","port") if cfg.has_option("RepBot","port") else 6667
+	channel = cfg.get("RepBot","channel") if cfg.has_option("RepBot","channel") else ""
+	print "Connecting to {0}:{1}\t{2}".format(server,port,channel)
+	if cfg.has_option("RepBot","ssl") and cfg.getboolean("RepBot","ssl"):
+		print "Using SSL"
+		reactor.connectSSL(server, port, RepBotFactory(channel), ssl.ClientContextFactory())
+	else:
+		print "Not using SSL"
+		reactor.connectTCP(server, port, RepBotFactory(channel))
 	reactor.run()
 
 

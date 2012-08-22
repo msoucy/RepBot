@@ -8,7 +8,7 @@ class ReputationSystem(object):
 		self.ignorelist=set()
 		self.cached = [None,None]
 		try:
-			self.reps = eval(open("reps.txt").read())
+			self.reps = eval(open("data/reps.txt").read())
 			print "Read reputation file."
 		except SyntaxError:
 			print "Error: could not read reputation file. Contents: `{0}`".format(open("reps.txt").read())
