@@ -9,20 +9,23 @@ def getNameFromIdent(name):
 	return name.partition("!")[0]
 
 class RepBot(irc.IRCClient):
-	def _get_nickname(self):
-		return self.factory.nickname
-	nickname = property(_get_nickname)
+	nickname = property(lambda self:self.factory.nickname)
+	realname = property(lambda self:self.factory.realname)
+	cfg = property(lambda self:self.factory.cfg)
 	
 	def __init__(self):
-		self.nickname = "RepBot"
-		self.realname = "Reputation Bot"
-		self.reps = ReputationSystem()
-		self.ignorelist = set()
-		self.admins = set(['msoucy'])
+		self.version = "0.7.1"
+		self.reps = ReputationSystem(self.cfg.get("RepBot","reps")
+									 if self.cfg.has_option("RepBot","reps")
+									 else "data/reps.txt")
+		self.ignorelist = set((self.cfg.get("RepBot","ignore")
+					if self.cfg.has_option("RepBot","ignore")
+					else "").split(','))
+		self.admins = set((self.cfg.get("RepBot","admins")
+					if self.cfg.has_option("RepBot","admins")
+					else "").split(','))
 		self.privonly = False
 		self.autorespond = False
-		self.version = "0.7"
-		self.report_time = 1000*60*60
 
 	def signedOn(self):
 		self.join(self.factory.channel)
@@ -142,9 +145,11 @@ class RepBot(irc.IRCClient):
 class RepBotFactory(protocol.ClientFactory):
 	protocol = RepBot
 
-	def __init__(self, channel, nickname='RepBot'):
+	def __init__(self, channel, cfg, nickname='RepBot', realname="Reputation Bot"):
 		self.channel = channel
 		self.nickname = nickname
+		self.realname = realname
+		self.cfg = cfg
 
 	def clientConnectionLost(self, connector, reason):
 		print "Lost connection (%s), reconnecting." % (reason,)
@@ -159,13 +164,16 @@ if __name__ == "__main__":
 	server = cfg.get("RepBot","server") if cfg.has_option("RepBot","server") else ""
 	port = cfg.getint("RepBot","port") if cfg.has_option("RepBot","port") else 6667
 	channel = cfg.get("RepBot","channel") if cfg.has_option("RepBot","channel") else ""
+	nickname = cfg.get("RepBot","nick") if cfg.has_option("RepBot","nick") else "RepBot"
+	realname = cfg.get("RepBot","realname") if cfg.has_option("RepBot","realname") else "Reputation Bot"
+	factory = RepBotFactory(channel, cfg, nickname=nickname, realname=realname)
 	print "Connecting to {0}:{1}\t{2}".format(server,port,channel)
 	if cfg.has_option("RepBot","ssl") and cfg.getboolean("RepBot","ssl"):
 		print "Using SSL"
-		reactor.connectSSL(server, port, RepBotFactory(channel), ssl.ClientContextFactory())
+		reactor.connectSSL(server, port, factory, ssl.ClientContextFactory())
 	else:
 		print "Not using SSL"
-		reactor.connectTCP(server, port, RepBotFactory(channel))
+		reactor.connectTCP(server, port, factory)
 	reactor.run()
 
 
