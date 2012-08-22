@@ -1,24 +1,25 @@
-import operator
+import operator, os.path
 
 class ReputationSystem(object):
-	__slots__=('reps', 'ignorelist', 'cached')
+	__slots__=('reps', 'ignorelist', 'cached', 'repfile')
 	
-	def __init__(self):
+	def __init__(self, repfile="data/reps.txt"):
 		self.reps={}
 		self.ignorelist=set()
 		self.cached = [None,None]
+		self.repfile = os.path.normpath(repfile)
 		try:
-			self.reps = eval(open("data/reps.txt").read())
+			self.reps = eval(open(self.repfile).read())
 			print "Read reputation file."
 		except SyntaxError:
-			print "Error: could not read reputation file. Contents: `{0}`".format(open("reps.txt").read())
+			print "Error: could not read reputation file. Contents: `{0}`".format(open(self.repfile).read())
 		except IOError:
 			print "Error: could not open reputation file"
 		self.filter()
 	
 	def dump(self):
 		self.filter()
-		fi = open("reps.txt","w")
+		fi = open(self.repfile,"w")
 		fi.write(str(self.reps))
 		fi.close()
 	

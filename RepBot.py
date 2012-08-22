@@ -104,7 +104,7 @@ class RepBot(irc.IRCClient):
 				if ' ' not in name:
 					self.reps.decr(name)
 		elif msg.startswith("!rep"):
-			msg=msg[len("!rep"):].strip()
+			msg=msg.replace("!rep","").strip()
 			self.msg(channel, self.reps.tell(msg if msg else user))
 		elif msg.startswith("!ver"):
 			self.msg(channel, 'I am RepBot version {0}'.format(self.version))
@@ -127,7 +127,7 @@ class RepBot(irc.IRCClient):
 			# It's a message just to me
 			if msg.startswith("!admin"):
 				if user in self.admins:
-					self.admin(user, msg[len("!admin"):].strip())
+					self.admin(user, msg.replace("!admin","").strip())
 				else:
 					print "Admin attempt from",user
 					self.msg(user, "You are not an admin.")
