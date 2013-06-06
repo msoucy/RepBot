@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import json
 from twisted.internet import reactor
 
 def get_channel_arg(channel, args):
@@ -26,9 +27,7 @@ def Action_help(bot, user, args):
 			a = globals().get("Action_"+arg)
 			if a: bot.msg(user, "{0}:\t{1}".format(a.name, a.helpmsg))
 	else:
-		bot.msg(user, "\n".join("{0}:\t{1}".format(a.name, a.helpmsg)
-					for a in globals()
-					if a.startswith("Action_")))
+		bot.msg(user, " ".join(globals()[a].name for a in globals() if a.startswith("Action_")))
 
 @Action("verify", "Confirm admin access")
 def Action_verify(bot, user, args):
@@ -62,6 +61,11 @@ def Action_dump(bot, user, args):
 	bot.reps.dump()
 	bot.log("Rep file dumped")
 
+@Action("load", "Load database from a file")
+def Action_dump(bot, user, args):
+	bot.reps.load()
+	bot.log("Rep file loaded")
+
 @Action("filter", "Remove unused entries")
 def Action_filter(bot, user, args):
 	bot.reps.filter()
@@ -76,7 +80,7 @@ def Action_clear(bot, user, args):
 			bot.reps.clear(name)
 
 @Action("tell", "Tell a channel rep information for users")
-def Action_clear(bot, user, args):
+def Action_tell(bot, user, args):
 	user = get_channel_arg(user, args)
 	for name in args:
 		bot.msg(user, bot.reps.tell(name))
@@ -104,26 +108,28 @@ def Action_limit(bot, user, args):
 
 @Action("set", "Manually set a user's rep value")
 def Action_set(bot, user, args):
-	if len(args) != 1: bot.msg(user, "Set failed: incorrect number of arguments")
-	bot.reps.set(args[0], int(args[1]))
+	if len(args) != 2:
+		bot.msg(user, "Set failed: incorrect number of arguments")
+	else:
+		bot.reps.set(args[0], args[1])
 
 @Action("allow", "Clear rep timeout restrictions for all given users")
-def Action_set(bot, user, args):
+def Action_allow(bot, user, args):
 	for name in args: bot.users[name]=[]
 
 @Action("auto", "Adjust autorespond mode")
-def Action_autorespond(bot, user, args):
+def Action_auto(bot, user, args):
 	if args: bot.autorespond = (args[0].lower()=="on")
 	bot.msg(user, "Autorespond is "+("on" if bot.autorespond else "off"))
 
 @Action("private", "Adjust private message restriction mode")
-def Action_autorespond(bot, user, args):
+def Action_private(bot, user, args):
 	if args: bot.privonly = (args[0].lower()=="on")
 	bot.msg(user, "Private messaging restriction is "+("on" if bot.privonly else "off"))
 
 @Action("apply", "Apply the Python dictionary provided to the rep database")
 def Action_apply(bot, user, args):
-	bot.reps.update(eval("".join(args)))
+	bot.reps.update(json.loads(" ".join(args)))
 
 @Action("term", "Safely terminate RepBot")
 def Action_term(bot, user, args):
@@ -143,8 +149,14 @@ def Action_part(bot, user, args):
 
 @Action("report", "Generate a report")
 def Action_report(bot, user, args):
-	if len(args) > 1: bot.msg(user, "Report failed: Too many arguments")
-	bot.msg(args[0] if args else user, bot.reps.report())
+	user = get_channel_arg(user, args)
+	forceFlag = False
+	if args == ["force"]:
+		forceFlag = True
+	elif args:
+		bot.msg(user, "Report failed: Too many arguments")
+		return
+	bot.msg(user, bot.reps.report(forceFlag))
 
 def admin(bot, user, msg):
 	if not msg.strip(): return

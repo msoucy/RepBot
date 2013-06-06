@@ -26,6 +26,10 @@ class RepBot(irc.IRCClient):
 		self.servername = cfg.get("servname", "Reputation Bot")
 		self.users={}
 
+		self.server = cfg.get("server","")
+		self.port = cfg.get("port",6667)
+		self.ssl = cfg.get("ssl",False)
+
 	def signedOn(self):
 		print "Signed on as {0}.".format(self.nickname)
 		for chan in cfg.get("channels",[]):
@@ -103,6 +107,21 @@ class RepBot(irc.IRCClient):
 	
 	def log(self, msg):
 		print time.asctime(),msg
+
+	def save(self):
+		self.reps.dump()
+		fi = open("data/settings.txt","w")
+		json.dump({"ignore":self.ignorelist,
+			"admins":self.admins,
+			"replimit":self.replimit,
+			"timelimit":self.timelimit,
+			"nick":self.nickname,
+			"realname":self.realname,
+			"servname":self.servname,
+			"server":self.server,
+			"port":self.port,
+			"ssl":self.ssl},fi);
+		fi.close()
 
 
 class RepBotFactory(protocol.ClientFactory):
