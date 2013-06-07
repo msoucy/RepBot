@@ -28,7 +28,9 @@ class RepBot(irc.IRCClient):
         self.nickname = cfg.get("nick", "RepBot")
         self.realname = cfg.get("realname", "Reputation Bot")
         self.servername = cfg.get("servname", "Reputation Bot")
+
         self.users = {}
+        self.channels = cfg.get("channels",[])
 
         self.server = cfg.get("server", "")
         self.port = cfg.get("port", 6667)
@@ -36,7 +38,7 @@ class RepBot(irc.IRCClient):
 
     def signedOn(self):
         print "Signed on as {0}.".format(self.nickname)
-        for chan in cfg.get("channels", []):
+        for chan in self.channels:
             self.join(chan)
 
     def joined(self, channel):
@@ -142,7 +144,8 @@ class RepBot(irc.IRCClient):
                    "servname": self.servname,
                    "server": self.server,
                    "port": self.port,
-                   "ssl": self.ssl}, fi)
+                   "ssl": self.ssl,
+                   "channels": self.channels}, fi)
         fi.close()
 
 

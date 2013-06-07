@@ -82,7 +82,7 @@ def Action_dump(bot, user, args):
 
 
 @Action("load", "Load database from a file")
-def Action_dump(bot, user, args):
+def Action_load(bot, user, args):
     bot.reps.load()
     bot.log("Rep file loaded")
 
@@ -175,7 +175,10 @@ def Action_apply(bot, user, args):
 @Action("term", "Safely terminate RepBot")
 def Action_term(bot, user, args):
     bot.reps.dump()
+    for chan in bot.channels:
+        bot.leave(chan, " ".join(args))
     bot.quit(" ".join(args))
+    bot.save()
     reactor.stop()
 
 
@@ -183,12 +186,15 @@ def Action_term(bot, user, args):
 def Action_join(bot, user, args):
     for chan in args:
         bot.join(chan)
+        bot.channels.append(chan)
+    bot.channels = sorted(set(bot.channels))
 
 
 @Action("part", "Leave a channel")
 def Action_part(bot, user, args):
     for chan in args:
         bot.leave(chan)
+        bot.channels.remove(chan)
 
 
 @Action("report", "Generate a report")
