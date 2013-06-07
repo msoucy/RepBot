@@ -51,9 +51,9 @@ def Action_admin(bot, user, args):
     cmd = args[0]
     args = args[1:]
     if cmd == "add":
-        bot.admins |= set(args)
+        bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) | set(args))
     elif cmd in ("remove", "rm"):
-        bot.admins -= set(args)
+        bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) - set(args))
     else:
         bot.msg(user, "Admin change failed: unknown action")
 
@@ -66,11 +66,11 @@ def Action_ignore(bot, user, args):
     cmd = args[0]
     args = args[1:]
     if cmd == "add":
-        bot.ignorelist |= set(args)
+        bot.cfg["ignore"] = sorted(set(bot.cfg["ignore"]) | set(args))
     elif cmd in ("remove", "rm"):
-        bot.ignorelist -= set(args)
+        bot.cfg["ignore"] = sorted(set(bot.cfg["ignore"]) - set(args))
     elif cmd == "list":
-        bot.msg(user, str(list(bot.ignorelist)))
+        bot.msg(user, str(list(bot.cfg["ignore"])))
     else:
         bot.msg(user, "Ignore change failed: unknown action")
 
@@ -124,14 +124,14 @@ def Action_limit(bot, user, args):
     args = args[1:]
     if cmd == "rep":
         if args:
-            bot.replimit = int(args[0])
+            bot.cfg["replimit"] = int(args[0])
         else:
-            bot.msg(user, "Rep limit: {0}".format(bot.replimit))
+            bot.msg(user, "Rep limit: {0}".format(bot.cfg["replimit"]))
     elif cmd == "time":
         if args:
-            bot.timelimit = int(args[0])
+            bot.cfg["timelimit"] = int(args[0])
         else:
-            bot.msg(user, "Time limit: {0}".format(bot.timelimit))
+            bot.msg(user, "Time limit: {0}".format(bot.cfg["timelimit"]))
     else:
         bot.msg(user, "Limit change failed: unknown limit")
 
@@ -153,8 +153,8 @@ def Action_allow(bot, user, args):
 @Action("auto", "Adjust autorespond mode")
 def Action_auto(bot, user, args):
     if args:
-        bot.autorespond = (args[0].lower() == "on")
-    bot.msg(user, "Autorespond is " + ("on" if bot.autorespond else "off"))
+        bot.cfg["autorespond"] = (args[0].lower() == "on")
+    bot.msg(user, "Autorespond is " + ("on" if bot.cfg["autorespond"] else "off"))
 
 
 @Action("private", "Adjust private message restriction mode")
@@ -174,10 +174,10 @@ def Action_apply(bot, user, args):
 
 @Action("term", "Safely terminate RepBot")
 def Action_term(bot, user, args):
-    for chan in bot.channels:
+    bot.save()
+    for chan in bot.cfg["channels"]:
         bot.leave(chan, " ".join(args))
     bot.quit(" ".join(args))
-    bot.save()
     reactor.stop()
 
 
@@ -185,15 +185,15 @@ def Action_term(bot, user, args):
 def Action_join(bot, user, args):
     for chan in args:
         bot.join(chan)
-        bot.channels.append(chan)
-    bot.channels = sorted(set(bot.channels))
+        bot.cfg["channels"].append(chan)
+    bot.cfg["channels"] = sorted(set(bot.cfg["channels"]))
 
 
 @Action("part", "Leave a channel")
 def Action_part(bot, user, args):
     for chan in args:
         bot.leave(chan)
-        bot.channels.remove(chan)
+        bot.cfg["channels"].remove(chan)
 
 
 @Action("report", "Generate a report")

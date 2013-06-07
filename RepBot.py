@@ -37,8 +37,8 @@ def normalize_config(cfg):
     # Default settings
     ret = {
         "reps": "data/reps.txt",
-        "ignore": set(),
-        "admins": set(),
+        "ignore": [],
+        "admins": [],
         "replimit": 5,
         "timelimit": 60.0 * 60.0,
         "privonly": False,
@@ -54,8 +54,8 @@ def normalize_config(cfg):
     # Add the new stuff
     ret.update(cfg)
     # Fix set information
-    ret["ignore"] = set(ret["ignore"])
-    ret["admins"] = set(ret["admins"])
+    ret["ignore"] = sorted(set(ret["ignore"]))
+    ret["admins"] = sorted(set(ret["admins"]))
     return ret
 
 
@@ -76,7 +76,7 @@ class RepBot(irc.IRCClient):
         self.versionNum = self.version
 
     def signedOn(self):
-        print "Signed on as {0}.".format(self.cfg["nikname"])
+        print "Signed on as {0}.".format(self.cfg["nick"])
         for chan in self.cfg["channels"]:
             self.join(chan)
 
@@ -115,7 +115,7 @@ class RepBot(irc.IRCClient):
 
     def repcmd(self, user, channel, msg):
         # Respond to private messages privately
-        if channel == self.cfg["nickname"]:
+        if channel == self.cfg["nick"]:
             channel = user
 
         args = msg.split()
@@ -150,9 +150,9 @@ class RepBot(irc.IRCClient):
             return
         user = getNameFromIdent(user)
 
-        if channel != self.cfg["nickname"]:
-            if msg.startswith(self.cfg["nickname"] + ":"):
-                msg = msg[len(self.cfg["nickname"]) + 1:].strip()
+        if channel != self.cfg["nick"]:
+            if msg.startswith(self.cfg["nick"] + ":"):
+                msg = msg[len(self.cfg["nick"]) + 1:].strip()
             elif msg.startswith('!'):
                 msg = msg[1:]
             elif not is_rep_change(msg):
@@ -164,7 +164,7 @@ class RepBot(irc.IRCClient):
             self.msg(
                 user,
                 "You have been blocked from utilizing my functionality.")
-        elif channel == self.cfg["nickname"]:
+        elif channel == self.cfg["nick"]:
             # It's a private message
             isAdmin = False
             if msg.startswith("admin"):
@@ -183,7 +183,7 @@ class RepBot(irc.IRCClient):
             else:
                 self.repcmd(user, channel, msg)
 
-        elif not self.privonly:
+        elif not self.cfg["privonly"]:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
             self.repcmd(user, channel, msg)
