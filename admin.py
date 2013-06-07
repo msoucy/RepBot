@@ -174,7 +174,6 @@ def Action_apply(bot, user, args):
 
 @Action("term", "Safely terminate RepBot")
 def Action_term(bot, user, args):
-    bot.reps.dump()
     for chan in bot.channels:
         bot.leave(chan, " ".join(args))
     bot.quit(" ".join(args))

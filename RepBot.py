@@ -1,44 +1,83 @@
 #!/usr/bin/python
 
-import sys
 import json
 import time
+import re
+
 from twisted.words.protocols import irc
 from twisted.internet import protocol, reactor, ssl
+
 from repsys import ReputationSystem
 import admin
+
+
+def is_rep_change(cmd):
+    return cmd.startswith(('++', '--')) or cmd.endswith(('++', '--'))
+
+
+def parse_rep_change(cng):
+    name, op = "", ""
+    if cng.startswith(("++", "--")) and cng.endswith(("++", "--")):
+        # Should be an error
+        pass
+    elif cng.startswith(("++", "--")):
+        op = cng[:2]
+        name = cng[2:]
+    elif cng.endswith(("++", "--")):
+        op = cng[-2:]
+        name = cng[:-2]
+    return name, op
 
 
 def getNameFromIdent(name):
     return name.partition("!")[0]
 
 
+def normalize_config(cfg):
+    # Default settings
+    ret = {
+        "reps": "data/reps.txt",
+        "ignore": set(),
+        "admins": set(),
+        "replimit": 5,
+        "timelimit": 60.0 * 60.0,
+        "privonly": False,
+        "autorespond": False,
+        "nick": "RepBot",
+        "realname": "Reputation Bot",
+        "servname": "Reputation Bot",
+        "channels": [],
+        "server": "",
+        "port": 6667,
+        "ssl": False
+    }
+    # Add the new stuff
+    ret.update(cfg)
+    # Fix set information
+    ret["ignore"] = set(ret["ignore"])
+    ret["admins"] = set(ret["admins"])
+    return ret
+
+
 class RepBot(irc.IRCClient):
 
     def __init__(self, cfg):
-        self.version = "0.8.0"
-        self.reps = ReputationSystem(cfg.get("reps", "data/reps.txt"))
-        self.ignorelist = set(cfg.get("ignore", []))
-        self.admins = set(cfg.get("admins", []))
-        self.privonly = False
-        self.autorespond = False
-        self.replimit = (cfg.get("replimit", 5))
-        self.timelimit = (cfg.get("timelimit", 60.0 * 60.0))
-
-        self.nickname = cfg.get("nick", "RepBot")
-        self.realname = cfg.get("realname", "Reputation Bot")
-        self.servername = cfg.get("servname", "Reputation Bot")
+        self.version = "0.9.0-alpha"
+        self.cfg = cfg
 
         self.users = {}
-        self.channels = cfg.get("channels",[])
+        self.reps = ReputationSystem(cfg["reps"])
 
-        self.server = cfg.get("server", "")
-        self.port = cfg.get("port", 6667)
-        self.ssl = cfg.get("ssl", False)
+        # Instance variables for irc.IRCClient
+        self.nickname = cfg["nick"]
+        self.realname = cfg["realname"]
+        self.sourceURL = "http://github.com/msoucy/RepBot"
+        self.versionName = "RepBot"
+        self.versionNum = self.version
 
     def signedOn(self):
-        print "Signed on as {0}.".format(self.nickname)
-        for chan in self.channels:
+        print "Signed on as {0}.".format(self.cfg["nikname"])
+        for chan in self.cfg["channels"]:
             self.join(chan)
 
     def joined(self, channel):
@@ -47,48 +86,59 @@ class RepBot(irc.IRCClient):
     def admin(self, user, msg):
         admin.admin(self, user, msg)
 
+    def handleChange(self, user, cmd):
+        name, op = parse_rep_change(cmd)
+        if name == user:
+            self.msg(user, "Cannot change own rep")
+            return
+        currtime = time.time()
+        self.users[user] = [val
+                            for val in self.users.get(user, [])
+                            if (currtime - val) < self.cfg["timelimit"]]
+        if len(self.users[user]) < self.cfg["replimit"]:
+            if op == "++":
+                self.reps.incr(name)
+                self.users[user].append(time.time())
+            elif op == "--":
+                self.reps.decr(name)
+                self.users[user].append(time.time())
+        else:
+            self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
+                     .format(int(self.cfg["timelimit"] - (currtime - self.users[-1]))))
+
+    def ignores(self, user):
+        # return user in self.cfg["ignore"]
+        for ig in self.cfg["ignore"]:
+            if re.search(ig, user) is not None:
+                return True
+        return False
+
     def repcmd(self, user, channel, msg):
-        def parseName(name):
-            return name[:-2].strip()
         # Respond to private messages privately
-        if channel == self.nickname:
+        if channel == self.cfg["nickname"]:
             channel = user
 
         args = msg.split()
         cmd = args[0] if args else ""
         args = args[1:] if args else []
 
-        if len(args) == 0 and cmd.endswith(('++', '--')) and parseName(cmd) != user:
-            currtime = time.time()
-            self.users[user] = [val for val in self.users.get(
-                                user, []) if (currtime - val) < self.timelimit]
-            if len(self.users[user]) < self.replimit:
-                name = parseName(cmd)
-                if cmd.endswith("++"):
-                    self.reps.incr(name)
-                    self.users[user].append(time.time())
-                elif cmd.endswith("--"):
-                    self.reps.decr(name)
-                    self.users[user].append(time.time())
-            else:
-                self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
-                         .format(int(self.timelimit - (currtime - val))))
-            return
-        if cmd.startswith("rep"):
+        if len(args) == 0 and is_rep_change(cmd):
+            self.handleChange(user, cmd)
+        elif cmd in ("rep",):
             self.msg(channel, self.reps.tell(args[0] if args else user))
-        elif cmd.startswith("ver"):
+        elif cmd in ("ver", "version", "about"):
             self.msg(channel, 'I am RepBot version {0}'.format(self.version))
-        elif cmd.startswith("help"):
+        elif cmd in ("help",):
             self.msg(
                 channel,
                 'Message me with "!rep <name>" to get the reputation of <name>')
             self.msg(
                 channel,
-                'Say "<name>++" or "<name>--" to change the reputation of <name>. You are not able to change your own rep.')
+                'Use prefix or postfix ++/-- to change someone\'s rep. You are not able to change your own rep.')
             self.msg(
                 channel,
                 'Message me with "!version" to see my version number')
-        elif self.autorespond and channel == user:
+        elif self.cfg["autorespond"] and channel == user:
             # It's not a valid command, so let them know
             # Only respond privately
             self.msg(
@@ -100,30 +150,39 @@ class RepBot(irc.IRCClient):
             return
         user = getNameFromIdent(user)
 
-        if channel != self.nickname:
-            if msg.startswith(self.nickname + ":"):
-                msg = msg[len(self.nickname) + 1:].strip()
+        if channel != self.cfg["nickname"]:
+            if msg.startswith(self.cfg["nickname"] + ":"):
+                msg = msg[len(self.cfg["nickname"]) + 1:].strip()
             elif msg.startswith('!'):
                 msg = msg[1:]
-            elif not msg.endswith(("++", "--")):
+            elif not is_rep_change(msg):
                 return
         elif msg.startswith('!'):
             msg = msg[1:]
 
-        if user in self.ignorelist:
+        if self.ignores(user):
             self.msg(
                 user,
                 "You have been blocked from utilizing my functionality.")
-        elif channel == self.nickname:
+        elif channel == self.cfg["nickname"]:
             # It's a private message
+            isAdmin = False
             if msg.startswith("admin"):
-                if user in self.admins:
-                    self.admin(user, msg.replace("admin", "", 1).strip())
+                msg = msg.replace("admin", "", 1)
+                isAdmin = True
+            elif msg.startswith("@"):
+                msg = msg[1:]
+                isAdmin = True
+
+            if isAdmin:
+                if user in self.cfg["admins"]:
+                    self.admin(user, msg)
                 else:
                     self.log("Admin attempt from " + user)
                     self.msg(user, "You are not an admin.")
             else:
                 self.repcmd(user, channel, msg)
+
         elif not self.privonly:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
@@ -135,17 +194,7 @@ class RepBot(irc.IRCClient):
     def save(self):
         self.reps.dump()
         fi = open("data/settings.txt", "w")
-        json.dump({"ignore": self.ignorelist,
-                   "admins": self.admins,
-                   "replimit": self.replimit,
-                   "timelimit": self.timelimit,
-                   "nick": self.nickname,
-                   "realname": self.realname,
-                   "servname": self.servname,
-                   "server": self.server,
-                   "port": self.port,
-                   "ssl": self.ssl,
-                   "channels": self.channels}, fi)
+        json.dump(cfg, fi)
         fi.close()
 
 
@@ -165,12 +214,12 @@ class RepBotFactory(protocol.ClientFactory):
         print "Could not connect: %s" % (reason,)
 
 if __name__ == "__main__":
-    cfg = json.load(open("data/settings.txt"))
-    server = cfg.get("server", "")
-    port = cfg.get("port", 6667)
+    cfg = normalize_config(json.load(open("data/settings.txt")))
+    server = cfg["server"]
+    port = cfg["port"]
     factory = RepBotFactory(cfg)
     print "Connecting to {0}:{1}".format(server, port)
-    if cfg.get("ssl", False):
+    if cfg["ssl"]:
         print "Using SSL"
         reactor.connectSSL(server, port, factory, ssl.ClientContextFactory())
     else:

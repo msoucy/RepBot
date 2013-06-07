@@ -30,10 +30,10 @@ class ReputationSystem(object):
         fi.close()
 
     def incr(self, name):
-        self.reps[name] = self.reps.get(name, 0) + 1
+        self.reps.setdefault(name, 0) += 1
 
     def decr(self, name):
-        self.reps[name] = self.reps.get(name, 0) - 1
+        self.reps.setdefault(name, 0) -= 1
 
     def get(self, name):
         return self.reps.get(name, 0)
