@@ -88,7 +88,7 @@ class RepBot(irc.IRCClient):
 
     def handleChange(self, user, cmd):
         name, op = parse_rep_change(cmd)
-        if name == user:
+        if name.split("|")[0].lower() == user.split("|")[0].lower():
             self.msg(user, "Cannot change own rep")
             return
         currtime = time.time()
@@ -160,20 +160,20 @@ class RepBot(irc.IRCClient):
         elif msg.startswith('!'):
             msg = msg[1:]
 
-        if self.ignores(user):
+        isAdmin = False
+        if msg.startswith("admin"):
+            msg = msg.replace("admin", "", 1)
+            isAdmin = True
+        elif msg.startswith("@"):
+            msg = msg[1:]
+            isAdmin = True
+
+        if self.ignores(user) and not (isAdmin and user in self.cfg["admins"]):
             self.msg(
                 user,
                 "You have been blocked from utilizing my functionality.")
         elif channel == self.cfg["nick"]:
             # It's a private message
-            isAdmin = False
-            if msg.startswith("admin"):
-                msg = msg.replace("admin", "", 1)
-                isAdmin = True
-            elif msg.startswith("@"):
-                msg = msg[1:]
-                isAdmin = True
-
             if isAdmin:
                 if user in self.cfg["admins"]:
                     self.admin(user, msg)
