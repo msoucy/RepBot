@@ -54,13 +54,15 @@ def Action_admin(bot, user, args):
         bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) | set(args))
     elif cmd in ("remove", "rm"):
         bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) - set(args))
+    elif cmd == "list":
+        bot.msg(user, str(list(bot.cfg["admin"])))
     else:
         bot.msg(user, "Admin change failed: unknown action")
 
 
 @Action("ignore", "Adjust ignore list")
 def Action_ignore(bot, user, args):
-    if len(args) < 2:
+    if len(args) < 1:
         bot.msg(user, "Ignore change failed: too few arguments")
         return
     cmd = args[0]
@@ -79,6 +81,12 @@ def Action_ignore(bot, user, args):
 def Action_dump(bot, user, args):
     bot.reps.dump()
     bot.log("Rep file dumped")
+
+
+@Action("save", "Save all bot information")
+def Action_save(bot, user, args):
+    bot.save()
+    bot.log("Bot state saved")
 
 
 @Action("load", "Load database from a file")
@@ -206,6 +214,13 @@ def Action_report(bot, user, args):
         bot.msg(user, "Report failed: Too many arguments")
         return
     bot.msg(user, bot.reps.report(forceFlag))
+
+@Action("as", "Spoof a message as a user")
+def Action_as(bot, user, args):
+    if len(args)<2:
+        bot.msg(user, "as failed: Not enough information")
+        return
+    bot.privmsg(args[0],args[0]," ".join(args[1:]))
 
 
 def admin(bot, user, msg):

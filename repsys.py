@@ -17,7 +17,7 @@ class ReputationSystem(object):
     def dump(self):
         self.filter()
         fi = open(self.repfile, "w")
-        json.dump(self.reps, fi)
+        json.dump(self.reps, fi, sort_keys=True, indent=4, separators=(',', ': '))
         fi.close()
 
     def load(self, repfile="data/reps.txt"):

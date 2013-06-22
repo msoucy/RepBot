@@ -11,6 +11,9 @@ from repsys import ReputationSystem
 import admin
 import random
 
+def canonical_name(user):
+    return re.split(r"\||`", user)[0].lower()
+
 class RepChangeCommand(object):
     def __init__(self):
         self.valid = False
@@ -26,7 +29,9 @@ class RepChangeCommand(object):
         self.valid = valid
 
     def setUser(self, user):
-        self.user = user.split("|")[0].lower()
+        self.user = canonical_name(user)
+        if not self.user:
+            self.setValid(False)
 
     def perform(self, val):
         return NotImplemented
@@ -112,6 +117,8 @@ class PrePostfixRepChange(RepChangeCommand):
         super(PrePostfixRepChange, self).__init__()
 
         m = msg.lower().split()
+        if len(m) > 1:
+                 return
 
         starts = msg.startswith(('++', '--'))
         ends = msg.endswith(('++', '--'))
@@ -195,13 +202,14 @@ def normalize_config(cfg):
     # Fix set information
     ret["ignore"] = sorted(set(ret["ignore"]))
     ret["admins"] = sorted(set(ret["admins"]))
+    ret["nick"] = ret["nick"].decode('ascii')
     return ret
 
 
 class RepBot(irc.IRCClient):
 
     def __init__(self, cfg):
-        self.version = "0.9.0-alpha"
+        self.version = "0.9.0-a3"
         self.cfg = cfg
 
         self.users = {}
@@ -240,12 +248,18 @@ class RepBot(irc.IRCClient):
             self.users[user].append(time.time())
         else:
             self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
-                     .format(int(self.cfg["timelimit"] - (currtime - self.users[-1]))))
+                     .format(int(self.cfg["timelimit"] - (currtime - self.users[user][-1]))))
 
     def ignores(self, user):
         # return user in self.cfg["ignore"]
         for ig in self.cfg["ignore"]:
             if re.search(ig, user) is not None:
+                return True
+        return False
+    
+    def hasadmin(self, user):
+        for adm in self.cfg["admins"]:
+            if re.search(adm, user) is not None:
                 return True
         return False
 
@@ -262,7 +276,9 @@ class RepBot(irc.IRCClient):
         if changer != None:
             self.handleChange(user, changer)
         elif cmd in ("rep",):
-            self.msg(channel, self.reps.tell(args[0] if args else user))
+            self.msg(channel, self.reps.tell(canonical_name(args[0] if args else user)))
+        elif cmd in ("top", "report"):
+            self.msg(user, self.reps.report(True))
         elif cmd in ("ver", "version", "about"):
             self.msg(channel, 'I am RepBot version {0}'.format(self.version))
         elif cmd in ("help",):
@@ -305,14 +321,14 @@ class RepBot(irc.IRCClient):
             msg = msg[1:]
             isAdmin = True
 
-        if self.ignores(user) and not (isAdmin and user in self.cfg["admins"]):
+        if self.ignores(user) and not (isAdmin and self.hasadmin(user)):
             self.msg(
                 user,
                 "You have been blocked from utilizing my functionality.")
         elif channel == self.cfg["nick"]:
             # It's a private message
             if isAdmin:
-                if user in self.cfg["admins"]:
+                if self.hasadmin(user):
                     self.admin(user, msg)
                 else:
                     self.log("Admin attempt from " + user)
@@ -331,7 +347,7 @@ class RepBot(irc.IRCClient):
     def save(self):
         self.reps.dump()
         fi = open("data/settings.txt", "w")
-        json.dump(cfg, fi)
+        json.dump(cfg, fi, sort_keys=True, indent=4, separators=(',', ': '))
         fi.close()
 
 
