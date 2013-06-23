@@ -303,6 +303,7 @@ class RepBot(irc.IRCClient):
             return
         user = getNameFromIdent(user)
 
+        msg = msg.decode("utf-8")
         if channel != self.cfg["nick"]:
             if msg.startswith(self.cfg["nick"] + ":"):
                 msg = msg[len(self.cfg["nick"]) + 1:].strip()
