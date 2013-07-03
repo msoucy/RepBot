@@ -11,6 +11,9 @@ def get_channel_arg(channel, args):
     return channel
 
 
+adminActions = {}
+
+
 def Action(name, helpmsg):
     class ActionClass(object):
         __slots__ = ('name', 'helpmsg', 'cmd')
@@ -19,6 +22,7 @@ def Action(name, helpmsg):
             self.name = name
             self.helpmsg = helpmsg
             self.cmd = f
+            adminActions[name] = self;
 
         def __call__(self, *args, **kwargs):
             return self.cmd(*args, **kwargs)
@@ -27,15 +31,15 @@ def Action(name, helpmsg):
 
 @Action("help", "List command help")
 def Action_help(bot, user, args):
-    if len(args):
+    if args:
         for arg in args:
-            a = globals().get("Action_" + arg)
+            a = adminActions.get(arg)
             if a:
                 bot.msg(user, "{0}:\t{1}".format(a.name, a.helpmsg))
     else:
         bot.msg(
             user,
-            " ".join(globals()[a].name for a in globals() if a.startswith("Action_")))
+            " ".join(a for a in adminActions))
 
 
 @Action("verify", "Confirm admin access")
@@ -222,14 +226,20 @@ def Action_as(bot, user, args):
         return
     bot.privmsg(args[0],args[0]," ".join(args[1:]))
 
+@Action("say", "Say a message")
+def Action_say(bot, user, args):
+    if len(args) < 2:
+        bot.msg(user, "Not enough arguments")
+    bot.msg(args[0], " ".join(args[1:]))
 
 def admin(bot, user, msg):
     if not msg.strip():
         return
     command = msg.split()[0].lower()
     args = msg.split()[1:]
-    action = globals().get("Action_" + command)
+    action = adminActions.get(command)
     if action:
         action(bot, user, args)
     else:
         print "Invalid command {0}".format(command)
+

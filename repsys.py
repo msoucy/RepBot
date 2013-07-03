@@ -49,8 +49,9 @@ class ReputationSystem(object):
 
     def report(self, force=False):
         self.filter()
-        sorted_reps = list(reversed(sorted(self.reps.iteritems(),
-                                           key=operator.itemgetter(1))))
+        sorted_reps = sorted(self.reps.iteritems(),
+                             key=operator.itemgetter(1),
+                             reverse=True)
         highest = sorted_reps[:5]
         lowest = sorted_reps[-5:]
         if force:
@@ -73,3 +74,4 @@ class ReputationSystem(object):
     def all(self):
         self.filter()
         return "All reps: {0}".format(self.reps)
+

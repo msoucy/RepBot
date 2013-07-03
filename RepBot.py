@@ -12,7 +12,7 @@ import admin
 import random
 
 def canonical_name(user):
-    return re.split(r"\||`", user)[0].lower()
+    return re.split(r"[\|`:]", user)[0].lower()
 
 class RepChangeCommand(object):
     def __init__(self):
@@ -112,6 +112,28 @@ class X86_8RepChange(X86RepChange):
     def getBits(self):
         return 8
 
+class GPlusRepChange(RepChangeCommand):
+    def __init__(self, msg):
+        super(GPlusRepChange, self).__init__()
+
+        m = msg.lower().split()
+        if len(m) != 2:
+            return
+
+        if m[1] not in ["+1","-1"]:
+            return
+
+        self.setUser(m[0])
+        self.op = m[1]
+
+        self.setValid(True)
+
+    def perform(self, val):
+        if self.op == "+1":
+            return val + 1
+        elif self.op == "-1":
+            return val - 1
+
 class PrePostfixRepChange(RepChangeCommand):
     def __init__(self, msg):
         super(PrePostfixRepChange, self).__init__()
@@ -160,6 +182,7 @@ class PDP8RepChange(RepChangeCommand):
 class RepChangeCommandFactory(object):
     REP_CHANGERS = [
         PrePostfixRepChange,
+        GPlusRepChange,
         X86_64RepChange,
         X86_32RepChange,
         X86_16RepChange,
