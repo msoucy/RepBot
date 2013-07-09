@@ -220,7 +220,8 @@ def normalize_config(cfg):
         "channels": [],
         "server": "",
         "port": 6667,
-        "ssl": False
+        "ssl": False,
+        "spy": False
     }
     # Add the new stuff
     ret.update(cfg)
@@ -340,6 +341,9 @@ class RepBot(irc.IRCClient):
             isAdmin = True
         elif RepChangeCommandFactory().parse(msg) == None:
             return
+
+        if self.cfg["spy"]:
+            self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
 
         user = ident_to_name(ident)
         if self.ignores(ident) and not self.hasadmin(ident):
