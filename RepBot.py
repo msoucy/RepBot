@@ -11,9 +11,6 @@ from repsys import ReputationSystem
 import admin
 import random
 
-def canonical_name(user):
-    return re.split(r"[\|`:]", user)[0].lower()
-
 class RepChangeCommand(object):
     def __init__(self):
         self.valid = False
@@ -198,9 +195,14 @@ class RepChangeCommandFactory(object):
         return None
 
 
-def getNameFromIdent(name):
-    return name.partition("!")[0]
+def canonical_name(user):
+    return re.split(r"[\|`:]", user)[0].lower()
 
+def ident_to_name(name):
+    return name.split("!", 1)[0]
+
+def wildcard_mask(wilds):
+    return wilds.replace('?','.').replace('*','.*?')
 
 def normalize_config(cfg):
     # Default settings
@@ -232,7 +234,7 @@ def normalize_config(cfg):
 class RepBot(irc.IRCClient):
 
     def __init__(self, cfg):
-        self.version = "0.9.0-a3"
+        self.version = "0.10.0"
         self.cfg = cfg
 
         self.users = {}
@@ -258,7 +260,7 @@ class RepBot(irc.IRCClient):
 
     def handleChange(self, user, changer):
         name = changer.getUser()
-        if name == user.split("|")[0].lower():
+        if name == canonical_name(user):
             self.msg(user, "Cannot change own rep")
             return
         currtime = time.time()
@@ -274,15 +276,14 @@ class RepBot(irc.IRCClient):
                      .format(int(self.cfg["timelimit"] - (currtime - self.users[user][-1]))))
 
     def ignores(self, user):
-        # return user in self.cfg["ignore"]
         for ig in self.cfg["ignore"]:
-            if re.search(ig, user) is not None:
+            if re.match(wildcard_mask(ig), user) is not None:
                 return True
         return False
     
     def hasadmin(self, user):
         for adm in self.cfg["admins"]:
-            if re.search(adm, user) is not None:
+            if re.match(wildcard_mask(adm), user) is not None:
                 return True
         return False
 
@@ -321,38 +322,34 @@ class RepBot(irc.IRCClient):
                 user,
                 'Invalid command. MSG me with !help for information')
 
-    def privmsg(self, user, channel, msg):
-        if not user:
+    def privmsg(self, ident, channel, msg):
+        if not ident:
             return
-        user = getNameFromIdent(user)
 
         msg = msg.decode("utf-8")
-        if channel != self.cfg["nick"]:
-            if msg.startswith(self.cfg["nick"] + ":"):
-                msg = msg[len(self.cfg["nick"]) + 1:].strip()
-            elif msg.startswith('!'):
-                msg = msg[1:]
-            elif RepChangeCommandFactory().parse(msg) == None:
-                return
-        elif msg.startswith('!'):
-            msg = msg[1:]
-
         isAdmin = False
-        if msg.startswith("admin"):
+        if msg.startswith('!'):
+            msg = msg[1:]
+        elif channel != self.cfg["nick"] and msg.startswith(self.cfg["nick"] + ":"):
+            msg = msg[len(self.cfg["nick"]) + 1:].strip()
+        elif msg.startswith("admin"):
             msg = msg.replace("admin", "", 1)
             isAdmin = True
         elif msg.startswith("@"):
             msg = msg[1:]
             isAdmin = True
+        elif RepChangeCommandFactory().parse(msg) == None:
+            return
 
-        if self.ignores(user) and not (isAdmin and self.hasadmin(user)):
+        user = ident_to_name(ident)
+        if self.ignores(ident) and not self.hasadmin(ident):
             self.msg(
                 user,
                 "You have been blocked from utilizing my functionality.")
         elif channel == self.cfg["nick"]:
             # It's a private message
             if isAdmin:
-                if self.hasadmin(user):
+                if self.hasadmin(ident):
                     self.admin(user, msg)
                 else:
                     self.log("Admin attempt from " + user)
