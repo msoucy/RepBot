@@ -173,6 +173,25 @@ class PDP8RepChange(RepChangeCommand):
     def perform(self, val):
         return val + 1
 
+class MIPSRepChange(RepChangeCommand):
+    def __init__(self, msg):
+        super(MIPSRepChange, self).__init__()
+
+        m = msg.lower().split()
+
+        if len(m) != 3 or m[0] != "addi" or m[2] not in ("+1","1","-1"):
+            return
+
+        self.setUser(m[1])
+        self.setValid(True)
+        self.op = ('+'+m[2])[-2:]
+
+    def perform(self, val):
+        if self.op == "+1":
+            return val + 1
+        elif self.op == "-1":
+            return val - 1
+
 class RepChangeCommandFactory(object):
     REP_CHANGERS = [
         PrePostfixRepChange,
@@ -181,7 +200,8 @@ class RepChangeCommandFactory(object):
         X86_32RepChange,
         X86_16RepChange,
         X86_8RepChange,
-        PDP8RepChange
+        PDP8RepChange,
+        MIPSRepChange
     ]
 
     def parse(self, msg):
