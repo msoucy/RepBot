@@ -80,6 +80,14 @@ def Action_ignore(bot, user, args):
     else:
         bot.msg(user, "Ignore change failed: unknown action")
 
+@Action("spy", "Control spy mode")
+def Action_spy(bot, user, args):
+    if len(args) == 0:
+        bot.msg(user, "Spy mode is "+("on" if bot.cfg["spy"] else "off"))
+    elif len(args) == 1:
+        bot.cfg["spy"] = (args[0].lower() == "on")
+    else:
+        bot.msg(user, "Invalid spy action")
 
 @Action("dump", "Dump database to a file")
 def Action_dump(bot, user, args):
