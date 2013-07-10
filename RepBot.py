@@ -327,11 +327,6 @@ class RepBot(irc.IRCClient):
         if not ident:
             return
 
-        if self.ignores(ident) and not self.hasadmin(ident):
-            self.msg(
-                user,
-                "You have been blocked from utilizing my functionality.")
-
         msg = msg.decode("utf-8")
         isAdmin = False
         if msg.startswith('!'):
@@ -353,13 +348,18 @@ class RepBot(irc.IRCClient):
             # It doesn't match a rep change
             return
 
+        if self.ignores(ident) and not self.hasadmin(ident):
+            self.msg(
+                user,
+                "You have been blocked from utilizing my functionality.")
+
         if self.cfg["spy"]:
             self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
 
         user = ident_to_name(ident)
         if isAdmin:
             self.admin(user, msg)
-        elif channel != self.cfg["nick"] or self.cfg["privonly"]:
+        elif channel == self.cfg["nick"] or not self.cfg["privonly"]:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
             self.repcmd(user, channel, msg)
