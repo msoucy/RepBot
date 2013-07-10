@@ -327,41 +327,39 @@ class RepBot(irc.IRCClient):
         if not ident:
             return
 
+        if self.ignores(ident) and not self.hasadmin(ident):
+            self.msg(
+                user,
+                "You have been blocked from utilizing my functionality.")
+
         msg = msg.decode("utf-8")
         isAdmin = False
         if msg.startswith('!'):
+            # It's a command to RepBot itself
             msg = msg[1:]
         elif channel != self.cfg["nick"] and msg.startswith(self.cfg["nick"] + ":"):
+            # It's a command to RepBot itself
             msg = msg[len(self.cfg["nick"]) + 1:].strip()
-        elif msg.startswith("admin"):
-            msg = msg.replace("admin", "", 1)
-            isAdmin = True
-        elif msg.startswith("@"):
-            msg = msg[1:]
+        elif self.hasadmin(ident) and channel == self.cfg["nick"]:
+            # They have admin access, check for commands
+            if msg.startswith("admin"):
+                msg = msg.replace("admin", "", 1)
+            elif msg.startswith("@"):
+                msg = msg[1:]
+            else:
+                return
             isAdmin = True
         elif RepChangeCommandFactory().parse(msg) == None:
+            # It doesn't match a rep change
             return
 
         if self.cfg["spy"]:
             self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
 
         user = ident_to_name(ident)
-        if self.ignores(ident) and not self.hasadmin(ident):
-            self.msg(
-                user,
-                "You have been blocked from utilizing my functionality.")
-        elif channel == self.cfg["nick"]:
-            # It's a private message
-            if isAdmin:
-                if self.hasadmin(ident):
-                    self.admin(user, msg)
-                else:
-                    self.log("Admin attempt from " + user)
-                    self.msg(user, "You are not an admin.")
-            else:
-                self.repcmd(user, channel, msg)
-
-        elif not self.cfg["privonly"]:
+        if isAdmin:
+            self.admin(user, msg)
+        elif channel != self.cfg["nick"] or self.cfg["privonly"]:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
             self.repcmd(user, channel, msg)

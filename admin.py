@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import ast
 import json
 from twisted.internet import reactor
 
@@ -80,12 +81,15 @@ def Action_ignore(bot, user, args):
     else:
         bot.msg(user, "Ignore change failed: unknown action")
 
-@Action("spy", "Control spy mode")
-def Action_spy(bot, user, args):
-    if len(args) == 0:
-        bot.msg(user, "Spy mode is "+("on" if bot.cfg["spy"] else "off"))
-    elif len(args) == 1:
-        bot.cfg["spy"] = (args[0].lower() == "on")
+@Action("cfg", "Control a config setting")
+def Action_cfg(bot, user, args):
+    if len(args) == 1:
+        bot.msg(user, "{0} = {1}".format(args[0], bot.cfg.get(args[0])))
+    elif len(args) == 2:
+        newval = ast.literal_eval(args[1])
+        if type(newval) == type(bot.cfg.get(args[0])):
+            bot.cfg[args[0]] = newval
+        return
     else:
         bot.msg(user, "Invalid spy action")
 
@@ -168,23 +172,6 @@ def Action_set(bot, user, args):
 def Action_allow(bot, user, args):
     for name in args:
         bot.users[name] = []
-
-
-@Action("auto", "Adjust autorespond mode")
-def Action_auto(bot, user, args):
-    if args:
-        bot.cfg["autorespond"] = (args[0].lower() == "on")
-    bot.msg(user, "Autorespond is " + ("on" if bot.cfg["autorespond"] else "off"))
-
-
-@Action("private", "Adjust private message restriction mode")
-def Action_private(bot, user, args):
-    if args:
-        bot.privonly = (args[0].lower() == "on")
-    bot.msg(
-        user,
-        "Private messaging restriction is " + (
-        "on" if bot.privonly else "off"))
 
 
 @Action("apply", "Apply the Python dictionary provided to the rep database")
