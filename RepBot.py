@@ -348,6 +348,7 @@ class RepBot(irc.IRCClient):
             # It doesn't match a rep change
             return
 
+        user = ident_to_name(ident)
         if self.ignores(ident) and not self.hasadmin(ident):
             self.msg(
                 user,
@@ -356,7 +357,6 @@ class RepBot(irc.IRCClient):
         if self.cfg["spy"]:
             self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
 
-        user = ident_to_name(ident)
         if isAdmin:
             self.admin(user, msg)
         elif channel == self.cfg["nick"] or not self.cfg["privonly"]:
