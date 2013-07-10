@@ -135,10 +135,6 @@ class PrePostfixRepChange(RepChangeCommand):
     def __init__(self, msg):
         super(PrePostfixRepChange, self).__init__()
 
-        m = msg.lower().split()
-        if len(m) > 1:
-                 return
-
         starts = msg.startswith(('++', '--'))
         ends = msg.endswith(('++', '--'))
 
@@ -153,7 +149,8 @@ class PrePostfixRepChange(RepChangeCommand):
             self.setUser(msg[:-2])
             self.op = msg[-2:]
 
-        self.setValid(True)
+        if len(self.getUser().split()) == 1:
+            self.setValid(True)
 
     def perform(self, val):
         if self.op == "++":
@@ -203,6 +200,9 @@ def ident_to_name(name):
 
 def wildcard_mask(wilds):
     return wilds.replace('?','.').replace('*','.*?')
+
+def wildcard_matches(wild, s):
+    return re.match(wildcard_mask(wild), s) is not None
 
 def normalize_config(cfg):
     # Default settings
@@ -278,13 +278,13 @@ class RepBot(irc.IRCClient):
 
     def ignores(self, user):
         for ig in self.cfg["ignore"]:
-            if re.match(wildcard_mask(ig), user) is not None:
+            if wildcard_matches(ig, user):
                 return True
         return False
     
     def hasadmin(self, user):
         for adm in self.cfg["admins"]:
-            if re.match(wildcard_mask(adm), user) is not None:
+            if wildcard_matches(adm, user):
                 return True
         return False
 
