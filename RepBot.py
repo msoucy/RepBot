@@ -224,7 +224,7 @@ def wildcard_mask(wilds):
 def wildcard_matches(wild, s):
     return re.match(wildcard_mask(wild), s) is not None
 
-def normalize_config(cfg):
+def normalize_config(cfgFilename):
     # Default settings
     ret = {
         "reps": "data/reps.txt",
@@ -244,7 +244,10 @@ def normalize_config(cfg):
         "spy": False
     }
     # Add the new stuff
-    ret.update(cfg)
+    ret.update(json.load(open(cfgFilename)))
+    # Write the full config file, so they have a full listing
+    with open(cfgFilename,'w') as of:
+        json.dump(ret, of, sort_keys=True, indent=4, separators=(',', ': '))
     # Fix set information
     ret["ignore"] = sorted(set(ret["ignore"]))
     ret["admins"] = sorted(set(ret["admins"]))
@@ -420,7 +423,7 @@ class RepBotFactory(protocol.ClientFactory):
         print "Could not connect: %s" % (reason,)
 
 if __name__ == "__main__":
-    cfg = normalize_config(json.load(open("data/settings.txt")))
+    cfg = normalize_config("data/settings.txt")
     server = cfg["server"]
     port = cfg["port"]
     factory = RepBotFactory(cfg)
