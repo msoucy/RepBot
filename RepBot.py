@@ -249,7 +249,17 @@ def normalize_config(cfg):
     ret["ignore"] = sorted(set(ret["ignore"]))
     ret["admins"] = sorted(set(ret["admins"]))
     ret["nick"] = ret["nick"].decode('ascii')
-    return ret
+    
+    def cleanup(item):
+        if isinstance(item, dict):
+            return {name:cleanup(val) for name, val in item.items()}
+        elif isinstance(item, list):
+            return [cleanup(x) for x in item]
+        elif isinstance(item, basestring):
+            return str(item)
+        else:
+            return item
+    return cleanup(ret)
 
 
 class RepBot(irc.IRCClient):
