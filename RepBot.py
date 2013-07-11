@@ -17,11 +17,8 @@ def canonical_name(user):
 def ident_to_name(name):
     return name.split("!", 1)[0]
 
-def wildcard_mask(wilds):
-    return wilds.replace('?','.').replace('*','.*?')
-
 def wildcard_matches(wild, s):
-    return re.match(wildcard_mask(wild), s) is not None
+    return re.match(wild.replace('?','.').replace('*','.*?'), s) is not None
 
 def normalize_config(cfgFilename):
     # Default settings
@@ -30,7 +27,7 @@ def normalize_config(cfgFilename):
         "ignore": [],
         "admins": [],
         "replimit": 5,
-        "timelimit": 60.0 * 60.0,
+        "timelimit": 5.0 * 60.0,
         "privonly": False,
         "autorespond": False,
         "nick": "RepBot",
@@ -97,12 +94,12 @@ class RepBot(irc.IRCClient):
             self.msg(user, "Cannot change own rep")
             return
         currtime = time.time()
+        # Filter old uses
         self.users[user] = [val
                             for val in self.users.get(user, [])
                             if (currtime - val) < self.cfg["timelimit"]]
         if len(self.users[user]) < self.cfg["replimit"]:
-            rep = self.reps.get(name)
-            self.reps.set(name, changer.perform(rep))
+            self.reps.apply(changer.perform(rep))
             self.users[user].append(time.time())
         else:
             self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"

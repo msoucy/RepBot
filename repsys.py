@@ -9,7 +9,6 @@ class ReputationSystem(object):
     def __init__(self, repfile="data/reps.txt"):
         self.reps = {}
         self.ignorelist = set()
-        self.cached = [None, None]
         self.repfile = os.path.normpath(repfile)
         self.load(repfile)
         self.filter()
@@ -29,17 +28,14 @@ class ReputationSystem(object):
         self.reps = json.load(fi)
         fi.close()
 
-    def incr(self, name):
-        self.reps[name] = self.reps.get(name, 0) + 1
-
-    def decr(self, name):
-        self.reps[name] = self.reps.get(name, 0) - 1
-
     def get(self, name):
         return self.reps.get(name, 0)
 
     def set(self, name, val):
         self.reps[name] = int(val)
+
+    def apply(self, changer):
+        self.reps[changer.getUser()] = changer.perform(self.reps[changer.getUser()])
 
     def clear(self, name):
         self.reps.pop(name.strip(), None)
@@ -54,18 +50,9 @@ class ReputationSystem(object):
                              reverse=True)
         highest = sorted_reps[:5]
         lowest = sorted_reps[-5:]
-        if force:
-            self.cached = [None, None]
-        ret = ""
-        if highest != self.cached[0]:
-            ret += "Top reps: {0}\n".format(
-                ", ".join("{0}: {1}".format(name, score) for name, score in highest))
-            self.cached[0] = highest
-        if lowest != self.cached[1]:
-            ret += "Bottom reps: {0}\n".format(
-                ", ".join("{0}: {1}".format(name, score) for name, score in lowest))
-            self.cached[1] = lowest
-        return ret.strip()
+        return "Top reps: {0}\nBottom reps: {1}".format(
+            ", ".join("{0}: {1}".format(name, score) for name, score in sorted_reps[:5]),
+            ", ".join("{0}: {1}".format(name, score) for name, score in sorted_reps[-5:]))
 
     def tell(self, name):
         self.filter()

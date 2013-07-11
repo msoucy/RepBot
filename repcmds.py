@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
 import re
-
 import random
+
+def canonical_name(user):
+    return re.split(r"[\|`:]", user)[0].lower()
 
 class RepChangeCommand(object):
     def __init__(self):
@@ -185,8 +187,8 @@ class MIPSRepChange(RepChangeCommand):
         elif self.op == "-1":
             return val - 1
 
-class RepChangeCommandFactory(object):
-    REP_CHANGERS = [
+def get_rep_change(msg):
+    commands = [
         PrePostfixRepChange,
         GPlusRepChange,
         X86_64RepChange,
@@ -197,25 +199,9 @@ class RepChangeCommandFactory(object):
         MIPSRepChange
     ]
 
-    def parse(self, msg):
-        for changer in self.REP_CHANGERS:
-            c = changer(msg)
-            if c.isValid():
-                return c
-        return None
-
-def get_rep_change(msg):
-    return RepChangeCommandFactory().parse(msg)
-
-def canonical_name(user):
-    return re.split(r"[\|`:]", user)[0].lower()
-
-def ident_to_name(name):
-    return name.split("!", 1)[0]
-
-def wildcard_mask(wilds):
-    return wilds.replace('?','.').replace('*','.*?')
-
-def wildcard_matches(wild, s):
-    return re.match(wildcard_mask(wild), s) is not None
+    for changer in commands:
+        c = changer(msg)
+        if c.isValid():
+            return c
+    return None
 
