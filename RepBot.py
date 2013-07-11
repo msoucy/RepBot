@@ -17,9 +17,6 @@ def canonical_name(user):
 def ident_to_name(name):
     return name.split("!", 1)[0]
 
-def wildcard_matches(wild, s):
-    return re.match(wild.replace('?','.').replace('*','.*?'), s) is not None
-
 def normalize_config(cfgFilename):
     # Default settings
     ret = {
@@ -64,7 +61,7 @@ def normalize_config(cfgFilename):
 class RepBot(irc.IRCClient):
 
     def __init__(self, cfg):
-        self.version = "0.10.0"
+        self.version = "0.11.0"
         self.cfg = cfg
 
         self.users = {}
@@ -77,6 +74,8 @@ class RepBot(irc.IRCClient):
         self.versionName = "RepBot"
         self.versionNum = self.version
 
+        self.rebuild_wildcards()
+
     def signedOn(self):
         print "Signed on as {0}.".format(self.cfg["nick"])
         for chan in self.cfg["channels"]:
@@ -85,8 +84,34 @@ class RepBot(irc.IRCClient):
     def joined(self, channel):
         print "Joined {0}.".format(channel)
 
-    def admin(self, user, msg):
-        admin.admin(self, user, msg)
+    def log(self, msg):
+        print time.asctime(), msg
+
+    def save(self):
+        self.reps.dump()
+        fi = open("data/settings.txt", "w")
+        json.dump(cfg, fi, sort_keys=True, indent=4, separators=(',', ': '))
+        fi.close()
+
+    def rebuild_wildcards(self):
+        def wildcard_regex(w):
+            return w.replace('.','\\.').replace('?','.').replace('*','.*?')
+        def regex_list(l):
+            return [re.compile(wildcard_regex(x)) for x in l]
+        self.adminList = regex_list(self.cfg["admins"])
+        self.ignoreList = regex_list(self.cfg["admins"])
+
+    def hasadmin(self, user):
+        for adm in self.adminList:
+            if adm.match(user):
+                return True
+        return False
+
+    def ignores(self, user):
+        for ig in self.ignoreList:
+            if ig.match(user):
+                return True
+        return False
 
     def handleChange(self, user, changer):
         name = changer.getUser()
@@ -100,22 +125,10 @@ class RepBot(irc.IRCClient):
                             if (currtime - val) < self.cfg["timelimit"]]
         if len(self.users[user]) < self.cfg["replimit"]:
             self.reps.apply(changer.perform(rep))
-            self.users[user].append(time.time())
+            self.users[user].append(currtime)
         else:
             self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
                      .format(int(self.cfg["timelimit"] - (currtime - self.users[user][-1]))))
-
-    def ignores(self, user):
-        for ig in self.cfg["ignore"]:
-            if wildcard_matches(ig, user):
-                return True
-        return False
-    
-    def hasadmin(self, user):
-        for adm in self.cfg["admins"]:
-            if wildcard_matches(adm, user):
-                return True
-        return False
 
     def repcmd(self, user, channel, msg):
         # Respond to private messages privately
@@ -187,20 +200,11 @@ class RepBot(irc.IRCClient):
             self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
 
         if isAdmin:
-            self.admin(user, msg)
+            admin.admin(self, user, msg)
         elif channel == self.cfg["nick"] or not self.cfg["privonly"]:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
             self.repcmd(user, channel, msg)
-
-    def log(self, msg):
-        print time.asctime(), msg
-
-    def save(self):
-        self.reps.dump()
-        fi = open("data/settings.txt", "w")
-        json.dump(cfg, fi, sort_keys=True, indent=4, separators=(',', ': '))
-        fi.close()
 
 
 class RepBotFactory(protocol.ClientFactory):

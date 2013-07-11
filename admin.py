@@ -63,6 +63,7 @@ def Action_admin(bot, user, args):
         bot.msg(user, str(list(bot.cfg["admin"])))
     else:
         bot.msg(user, "Admin change failed: unknown action")
+    bot.rebuild_wildcards()
 
 
 @Action("ignore", "Adjust ignore list")
@@ -80,6 +81,7 @@ def Action_ignore(bot, user, args):
         bot.msg(user, str(list(bot.cfg["ignore"])))
     else:
         bot.msg(user, "Ignore change failed: unknown action")
+    bot.rebuild_wildcards()
 
 @Action("cfg", "Control a config setting")
 def Action_cfg(bot, user, args):
