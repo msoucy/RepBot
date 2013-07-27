@@ -35,7 +35,7 @@ class ReputationSystem(object):
         self.reps[name] = int(val)
 
     def apply(self, changer):
-        self.reps[changer.getUser()] = changer.perform(self.reps[changer.getUser()])
+        self.reps[changer.getUser()] = changer.perform(self.reps.get(changer.getUser(),0))
 
     def clear(self, name):
         self.reps.pop(name.strip(), None)

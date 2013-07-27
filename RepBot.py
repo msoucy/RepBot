@@ -124,7 +124,7 @@ class RepBot(irc.IRCClient):
                             for val in self.users.get(user, [])
                             if (currtime - val) < self.cfg["timelimit"]]
         if len(self.users[user]) < self.cfg["replimit"]:
-            self.reps.apply(changer.perform(rep))
+            self.reps.apply(changer)
             self.users[user].append(currtime)
         else:
             self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
