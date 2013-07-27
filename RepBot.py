@@ -81,6 +81,11 @@ class RepBot(irc.IRCClient):
         for chan in self.cfg["channels"]:
             self.join(chan)
 
+    def irc_unknown(self, prefix, command, params):
+        if command == "INVITE":
+            self.log("{0}, {1}, {2}".format(prefix, command, params))
+            self.join(params[1])
+
     def joined(self, channel):
         print "Joined {0}.".format(channel)
 
