@@ -50,7 +50,7 @@ def Action_verify(bot, user, args):
 
 @Action("admin", "Adjust user admin access")
 def Action_admin(bot, user, args):
-    if len(args) < 2:
+    if len(args) < 2 and args[0] != "list":
         bot.msg(user, "Admin change failed: too few arguments")
         return
     cmd = args[0]
@@ -60,7 +60,7 @@ def Action_admin(bot, user, args):
     elif cmd in ("remove", "rm"):
         bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) - set(args))
     elif cmd == "list":
-        bot.msg(user, str(list(bot.cfg["admin"])))
+        bot.msg(user, str(list(bot.cfg["admins"])))
     else:
         bot.msg(user, "Admin change failed: unknown action")
     bot.rebuild_wildcards()
