@@ -4,7 +4,7 @@ import re
 import random
 
 def canonical_name(user):
-    return re.split(r"[\|`:_]", user)[0].lower()
+    return re.split(r"[\|`:_]", user.strip())[0].lower()
 
 class RepChangeCommand(object):
     def __init__(self):
