@@ -3,7 +3,7 @@
 import ast
 import json
 from twisted.internet import reactor
-
+from twisted.internet.task import LoopingCall
 
 def get_channel_arg(channel, args):
     if args and args[0].startswith(('#', '&', '+', '!')):
@@ -91,6 +91,10 @@ def Action_cfg(bot, user, args):
         newval = ast.literal_eval(args[1])
         if type(newval) == type(bot.cfg.get(args[0])):
             bot.cfg[args[0]] = newval
+    elif args[0] == "report" and len(args) == 3:
+        newval = ast.literal_eval(args[2])
+        if type(newval) == type(bot.cfg["report"].get(args[1])):
+            bot.cfg["report"][args[1]] = newval
     else:
         bot.msg(user, "Invalid config setting change")
 
@@ -202,6 +206,17 @@ def Action_part(bot, user, args):
         bot.leave(chan)
         bot.cfg["channels"].remove(chan)
 
+@Action("autoreport", "Automatically report to a channel")
+def Action_autoreport(bot, user, args):
+    channels = bot.cfg["report"]["channels"]
+    for chan in args:
+        if chan in bot.loops:
+            bot.loops.pop(chan).stop()
+            channels.remove(chan)
+        else:
+            bot.loops[chan] = LoopingCall(lambda:bot.report(chan))
+            bot.loops[chan].start(bot.cfg["report"]["delay"])
+            channels.append(chan)
 
 @Action("report", "Generate a report")
 def Action_report(bot, user, args):

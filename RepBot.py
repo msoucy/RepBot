@@ -35,7 +35,11 @@ def normalize_config(cfgFilename):
         "server": "",
         "port": 6667,
         "ssl": False,
-        "spy": False
+        "spy": False,
+        "report": {
+            "channels": [],
+            "delay": 60*60
+        }
     }
     # Add the new stuff
     ret.update(json.load(open(cfgFilename)))
@@ -45,6 +49,7 @@ def normalize_config(cfgFilename):
     # Fix set information
     ret["ignore"] = sorted(set(ret["ignore"]))
     ret["admins"] = sorted(set(ret["admins"]))
+    ret["report"]["channels"] = sorted(set(ret["report"]["channels"]))
     ret["nick"] = ret["nick"].decode('ascii')
     
     def cleanup(item):
@@ -67,6 +72,7 @@ class RepBot(irc.IRCClient):
 
         self.users = {}
         self.reps = ReputationSystem(cfg["reps"])
+        self.loops = {}
 
         # Instance variables for irc.IRCClient
         self.nickname = cfg["nick"]
@@ -137,6 +143,9 @@ class RepBot(irc.IRCClient):
         else:
             self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
                      .format(int(self.cfg["timelimit"] - (currtime - self.users[user][-1]))))
+
+    def report(self, chan):
+        admin.admin(self, chan, "report force")
 
     def repcmd(self, user, channel, msg):
         # Respond to private messages privately
