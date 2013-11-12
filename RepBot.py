@@ -39,7 +39,8 @@ def normalize_config(cfgFilename):
         "report": {
             "channels": [],
             "delay": 60*60
-        }
+        },
+        "savespeed": 30*60*60
     }
     # Add the new stuff
     ret.update(json.load(open(cfgFilename)))
@@ -82,7 +83,8 @@ class RepBot(irc.IRCClient):
         self.versionNum = self.version
 
         self.rebuild_wildcards()
-        LoopingCall(self.save).start(60*60*3)
+        self.saver = LoopingCall(self.save)
+        self.saver.start(self.cfg["savespeed"])
 
     def signedOn(self):
         print "Signed on as {0}.".format(self.cfg["nick"])

@@ -91,6 +91,10 @@ def Action_cfg(bot, user, args):
         newval = ast.literal_eval(args[1])
         if type(newval) == type(bot.cfg.get(args[0])):
             bot.cfg[args[0]] = newval
+        # I know, a sad little hack for now.
+        if args[0] == "savespeed":
+            bot.saver.stop()
+            bot.saver.start(newval)
     elif args[0] == "report" and len(args) == 3:
         newval = ast.literal_eval(args[2])
         if type(newval) == type(bot.cfg["report"].get(args[1])):
