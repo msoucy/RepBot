@@ -91,9 +91,8 @@ def Action_cfg(bot, user, args):
         newval = ast.literal_eval(args[1])
         if type(newval) == type(bot.cfg.get(args[0])):
             bot.cfg[args[0]] = newval
-        return
     else:
-        bot.msg(user, "Invalid spy action")
+        bot.msg(user, "Invalid config setting change")
 
 @Action("dump", "Dump database to a file")
 def Action_dump(bot, user, args):
@@ -104,7 +103,6 @@ def Action_dump(bot, user, args):
 @Action("save", "Save all bot information")
 def Action_save(bot, user, args):
     bot.save()
-    bot.log("Bot state saved")
 
 
 @Action("load", "Load database from a file")

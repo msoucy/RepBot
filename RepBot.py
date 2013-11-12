@@ -6,6 +6,7 @@ import re
 
 from twisted.words.protocols import irc
 from twisted.internet import protocol, reactor, ssl
+from twisted.internet.task import LoopingCall
 
 from repsys import ReputationSystem
 from repcmds import get_rep_change
@@ -75,6 +76,7 @@ class RepBot(irc.IRCClient):
         self.versionNum = self.version
 
         self.rebuild_wildcards()
+        LoopingCall(self.save).start(60*60*3)
 
     def signedOn(self):
         print "Signed on as {0}.".format(self.cfg["nick"])
@@ -83,7 +85,7 @@ class RepBot(irc.IRCClient):
 
     def irc_unknown(self, prefix, command, params):
         if command == "INVITE":
-            self.log("{0}, {1}, {2}".format(prefix, command, params))
+            self.log("Invite to {1} from {0}".format(prefix, params[1]))
             self.join(params[1])
 
     def joined(self, channel):
@@ -97,6 +99,7 @@ class RepBot(irc.IRCClient):
         fi = open("data/settings.txt", "w")
         json.dump(cfg, fi, sort_keys=True, indent=4, separators=(',', ': '))
         fi.close()
+        self.log("Saved data")
 
     def rebuild_wildcards(self):
         def wildcard_regex(w):
