@@ -50,15 +50,15 @@ class ReputationSystem(object):
                              reverse=True)
         highest = sorted_reps[:5]
         lowest = sorted_reps[-5:]
-        return "Top reps: {0}\nBottom reps: {1}".format(
-            ", ".join("{0}: {1}".format(name, score) for name, score in sorted_reps[:5]),
-            ", ".join("{0}: {1}".format(name, score) for name, score in sorted_reps[-5:]))
+        return u"Top reps: {0}\nBottom reps: {1}".format(
+            ", ".join(u"{0}: {1}".format(name, score) for name, score in sorted_reps[:5]),
+            ", ".join(u"{0}: {1}".format(name, score) for name, score in sorted_reps[-5:]))
 
     def tell(self, name):
         self.filter()
-        return "Rep for {0}: {1}".format(name, self.get(name))
+        return u"Rep for {0}: {1}".format(name, self.get(name))
 
     def all(self):
         self.filter()
-        return "All reps: {0}".format(self.reps)
+        return u"All reps: {0}".format(self.reps)
 

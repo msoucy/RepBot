@@ -87,7 +87,7 @@ class RepBot(irc.IRCClient):
         self.saver.start(self.cfg["savespeed"])
 
     def signedOn(self):
-        print "Signed on as {0}.".format(self.cfg["nick"])
+        print u"Signed on as {0}.".format(self.cfg["nick"])
         for chan in self.cfg["channels"]:
             self.join(chan)
 
@@ -188,7 +188,11 @@ class RepBot(irc.IRCClient):
         if not ident:
             return
 
-        msg = msg.decode("utf-8")
+        try:
+            msg = msg.decode("utf-8")
+        except UnicodeDecodeError as ue:
+            self.log("Received non-unicode message")
+            return
         isAdmin = False
         if msg.startswith('!'):
             # It's a command to RepBot itself
@@ -216,7 +220,7 @@ class RepBot(irc.IRCClient):
                 "You have been blocked from utilizing my functionality.")
 
         if self.cfg["spy"]:
-            self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
+            self.log(u"[{1}]\t{0}:\t{2}".format(ident, channel, msg))
 
         if isAdmin:
             admin.admin(self, user, msg)
