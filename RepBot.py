@@ -40,7 +40,8 @@ def normalize_config(cfgFilename):
             "channels": [],
             "delay": 60*60
         },
-        "savespeed": 30*60*60
+        "savespeed": 30*60*60,
+        "topprivate": True
     }
     # Add the new stuff
     ret.update(json.load(open(cfgFilename)))
@@ -164,7 +165,7 @@ class RepBot(irc.IRCClient):
         elif cmd in ("rep",):
             self.msg(channel, self.reps.tell(canonical_name(args[0] if args else user)))
         elif cmd in ("top", "report"):
-            self.msg(user, self.reps.report(True))
+            self.msg(user if self.cfg["topprivate"] else channel, self.reps.report(True))
         elif cmd in ("ver", "version", "about"):
             self.msg(channel, 'I am RepBot version {0}'.format(self.version))
         elif cmd in ("help",):
