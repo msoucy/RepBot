@@ -51,8 +51,8 @@ class ReputationSystem(object):
         highest = sorted_reps[:5]
         lowest = sorted_reps[-5:]
         return u"Top reps: {0}\nBottom reps: {1}".format(
-            ", ".join(u"{0}: {1}".format(name, score) for name, score in sorted_reps[:5]),
-            ", ".join(u"{0}: {1}".format(name, score) for name, score in sorted_reps[-5:]))
+            ", ".join(u"{0}: {1}".format(name.encode('unicode-escape'), score) for name, score in sorted_reps[:5]),
+            ", ".join(u"{0}: {1}".format(name.encode('unicode-escape'), score) for name, score in sorted_reps[-5:]))
 
     def tell(self, name):
         self.filter()

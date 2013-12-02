@@ -40,7 +40,7 @@ def normalize_config(cfgFilename):
             "channels": [],
             "delay": 60*60
         },
-        "savespeed": 30*60*60,
+        "savespeed": 3*60*60,
         "topprivate": True
     }
     # Add the new stuff
