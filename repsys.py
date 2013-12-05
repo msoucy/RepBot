@@ -56,7 +56,7 @@ class ReputationSystem(object):
 
     def tell(self, name):
         self.filter()
-        return u"Rep for {0}: {1}".format(name, self.get(name))
+        return u"Rep for {0}: {1}".format(name.encode('unicode-escape'), self.get(name))
 
     def all(self):
         self.filter()
