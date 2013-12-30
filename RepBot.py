@@ -44,10 +44,10 @@ def normalize_config(cfgFilename):
         "topprivate": True
     }
     # Add the new stuff
-    ret.update(yaml.load(open(cfgFilename)))
+    ret.update(yaml.safe_load(open(cfgFilename)))
     # Write the full config file, so they have a full listing
     with open(cfgFilename,'w') as of:
-        yaml.dump(ret, of)
+        yaml.dump(ret, of, default_flow_style=False)
     # Fix set information
     ret["ignore"] = sorted(set(ret["ignore"]))
     ret["admins"] = sorted(set(ret["admins"]))
@@ -105,9 +105,8 @@ class RepBot(irc.IRCClient):
 
     def save(self):
         self.reps.dump()
-        fi = open("data/settings.txt", "w")
-        yaml.dump(cfg, fi)
-        fi.close()
+        with open("data/settings.txt", "w") as fi:
+            yaml.dump(cfg, fi, default_flow_style=False)
         self.log("Saved data")
 
     def rebuild_wildcards(self):
