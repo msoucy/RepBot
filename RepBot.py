@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import json
+import yaml
 import time
 import re
 
@@ -44,10 +44,10 @@ def normalize_config(cfgFilename):
         "topprivate": True
     }
     # Add the new stuff
-    ret.update(json.load(open(cfgFilename)))
+    ret.update(yaml.load(open(cfgFilename)))
     # Write the full config file, so they have a full listing
     with open(cfgFilename,'w') as of:
-        json.dump(ret, of, sort_keys=True, indent=4, separators=(',', ': '))
+        yaml.dump(ret, of)
     # Fix set information
     ret["ignore"] = sorted(set(ret["ignore"]))
     ret["admins"] = sorted(set(ret["admins"]))
@@ -106,7 +106,7 @@ class RepBot(irc.IRCClient):
     def save(self):
         self.reps.dump()
         fi = open("data/settings.txt", "w")
-        json.dump(cfg, fi, sort_keys=True, indent=4, separators=(',', ': '))
+        yaml.dump(cfg, fi)
         fi.close()
         self.log("Saved data")
 
