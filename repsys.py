@@ -2,11 +2,12 @@ import json
 import operator
 import os.path
 
+REPFILE = "data/reps.txt"
 
 class ReputationSystem(object):
     __slots__ = ('reps', 'ignorelist', 'cached', 'repfile')
 
-    def __init__(self, repfile="data/reps.txt"):
+    def __init__(self, repfile=REPFILE):
         self.reps = {}
         self.ignorelist = set()
         self.repfile = os.path.normpath(repfile)
@@ -19,7 +20,7 @@ class ReputationSystem(object):
         json.dump(self.reps, fi, sort_keys=True, indent=4, separators=(',', ': '))
         fi.close()
 
-    def load(self, repfile="data/reps.txt"):
+    def load(self, repfile=REPFILE):
         if not os.path.exists(repfile):
             self.reps = {}
             self.dump()
@@ -50,15 +51,15 @@ class ReputationSystem(object):
                              reverse=True)
         highest = sorted_reps[:5]
         lowest = sorted_reps[-5:]
-        return u"Top reps: {0}\nBottom reps: {1}".format(
-            ", ".join(u"{0}: {1}".format(name.encode('unicode-escape'), score) for name, score in sorted_reps[:5]),
-            ", ".join(u"{0}: {1}".format(name.encode('unicode-escape'), score) for name, score in sorted_reps[-5:]))
+        return "Top reps: {0}\nBottom reps: {1}".format(
+            ", ".join("{0}: {1}".format(name.encode('unicode-escape'), score) for name, score in sorted_reps[:5]),
+            ", ".join("{0}: {1}".format(name.encode('unicode-escape'), score) for name, score in sorted_reps[-5:]))
 
     def tell(self, name):
         self.filter()
-        return u"Rep for {0}: {1}".format(name.encode('unicode-escape'), self.get(name))
+        return "Rep for {0}: {1}".format(name.encode('unicode-escape'), self.get(name))
 
     def all(self):
         self.filter()
-        return u"All reps: {0}".format(self.reps)
+        return "All reps: {0}".format(self.reps)
 

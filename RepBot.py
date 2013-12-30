@@ -88,7 +88,7 @@ class RepBot(irc.IRCClient):
         self.saver.start(self.cfg["savespeed"])
 
     def signedOn(self):
-        print u"Signed on as {0}.".format(self.cfg["nick"])
+        print "Signed on as {0}.".format(self.cfg["nick"])
         for chan in self.cfg["channels"]:
             self.join(chan)
 
@@ -221,7 +221,7 @@ class RepBot(irc.IRCClient):
                 "You have been blocked from utilizing my functionality.")
 
         if self.cfg["spy"]:
-            self.log(u"[{1}]\t{0}:\t{2}".format(ident, channel, msg))
+            self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
 
         if isAdmin:
             admin.admin(self, user, msg)
