@@ -69,7 +69,7 @@ def normalize_config(cfgFilename):
 class RepBot(irc.IRCClient):
 
     def __init__(self, cfg):
-        self.version = "0.11.0"
+        self.version = "0.12.0"
         self.cfg = cfg
 
         self.users = {}
@@ -84,6 +84,7 @@ class RepBot(irc.IRCClient):
         self.versionNum = self.version
 
         self.rebuild_wildcards()
+        self.changed = False
         self.saver = LoopingCall(self.save)
         self.saver.start(self.cfg["savespeed"])
 
@@ -104,6 +105,8 @@ class RepBot(irc.IRCClient):
         print time.asctime(), msg
 
     def save(self):
+        if not self.changed: return
+        self.changed = False
         self.reps.dump()
         with open("data/settings.txt", "w") as fi:
             yaml.dump(cfg, fi, default_flow_style=False)
@@ -142,6 +145,7 @@ class RepBot(irc.IRCClient):
         if len(self.users[user]) < self.cfg["replimit"]:
             self.reps.apply(changer)
             self.users[user].append(currtime)
+            self.changed = True
         else:
             self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
                      .format(int(self.cfg["timelimit"] - (currtime - self.users[user][-1]))))
