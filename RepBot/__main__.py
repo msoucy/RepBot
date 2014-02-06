@@ -121,16 +121,10 @@ class RepBot(irc.IRCClient):
         self.ignoreList = regex_list(self.cfg["admins"])
 
     def hasadmin(self, user):
-        for adm in self.adminList:
-            if adm.match(user):
-                return True
-        return False
+        return any(u.match(user) for u in self.adminList)
 
     def ignores(self, user):
-        for ig in self.ignoreList:
-            if ig.match(user):
-                return True
-        return False
+        return any(u.match(user) for u in self.ignoreList)
 
     def handleChange(self, user, changer):
         name = changer.getUser()

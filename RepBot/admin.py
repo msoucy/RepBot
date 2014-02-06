@@ -1,14 +1,13 @@
 #!/usr/bin/python
 
-import ast
+from ast import literal_eval
 import json
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 
 def get_channel_arg(channel, args):
     if args and args[0].startswith(('#', '&', '+', '!')):
-        channel = args[0]
-        args.pop(0)
+        channel = args.pop(0)
     return channel
 
 
@@ -23,7 +22,7 @@ def Action(name, helpmsg):
             self.name = name
             self.helpmsg = helpmsg
             self.cmd = f
-            adminActions[name] = self;
+            adminActions[name] = self
 
         def __call__(self, *args, **kwargs):
             return self.cmd(*args, **kwargs)
@@ -88,7 +87,7 @@ def Action_cfg(bot, user, args):
     if len(args) == 1:
         bot.msg(user, "{0} = {1}".format(args[0], bot.cfg.get(args[0])))
     elif len(args) == 2:
-        newval = ast.literal_eval(args[1])
+        newval = literal_eval(args[1])
         if type(newval) == type(bot.cfg.get(args[0])):
             bot.cfg[args[0]] = newval
         # I know, a sad little hack for now.
@@ -96,7 +95,7 @@ def Action_cfg(bot, user, args):
             bot.saver.stop()
             bot.saver.start(newval)
     elif args[0] == "report" and len(args) == 3:
-        newval = ast.literal_eval(args[2])
+        newval = literal_eval(args[2])
         if type(newval) == type(bot.cfg["report"].get(args[1])):
             bot.cfg["report"][args[1]] = newval
     else:
