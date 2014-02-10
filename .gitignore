@@ -28,3 +28,6 @@ pip-log.txt
 
 #Data files
 data
+
+# Swap files
+*.sw[po]
