@@ -118,7 +118,7 @@ class RepBot(irc.IRCClient):
         def regex_list(l):
             return [re.compile(wildcard_regex(x)) for x in l]
         self.adminList = regex_list(self.cfg["admins"])
-        self.ignoreList = regex_list(self.cfg["admins"])
+        self.ignoreList = regex_list(self.cfg["ignore"])
 
     def hasadmin(self, user):
         return any(u.match(user) for u in self.adminList)
@@ -218,7 +218,7 @@ class RepBot(irc.IRCClient):
                 "You have been blocked from utilizing my functionality.")
 
         if self.cfg["spy"]:
-            self.log("[{1}]\t{0}:\t{2}".format(ident, channel, msg))
+            self.log("[{0}]\t{1}:\t{2}".format(channel, ident, msg))
 
         if isAdmin:
             admin.admin(self, user, msg)
