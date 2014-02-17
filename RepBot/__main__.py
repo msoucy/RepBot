@@ -8,7 +8,7 @@ from twisted.words.protocols import irc
 from twisted.internet import protocol, reactor, ssl
 from twisted.internet.task import LoopingCall
 
-from repsys import ReputationSystem
+from backend_yaml import ReputationSystemYAML
 from repcmds import get_rep_change
 import admin
 
@@ -73,7 +73,7 @@ class RepBot(irc.IRCClient):
         self.cfg = cfg
 
         self.users = {}
-        self.reps = ReputationSystem(cfg["reps"])
+        self.reps = ReputationSystemYAML(cfg["reps"])
         self.loops = {}
 
         # Instance variables for irc.IRCClient
@@ -107,7 +107,7 @@ class RepBot(irc.IRCClient):
     def save(self):
         if not self.changed: return
         self.changed = False
-        self.reps.dump()
+        self.reps.save()
         with open("data/settings.txt", "w") as fi:
             yaml.dump(cfg, fi, default_flow_style=False)
         self.log("Saved data")
@@ -153,8 +153,7 @@ class RepBot(irc.IRCClient):
             channel = user
 
         args = msg.split()
-        cmd = args[0] if args else ""
-        args = args[1:] if args else []
+        cmd = (args[0], args[1:]) if args else ("", [])
         changer = get_rep_change(msg)
 
         if changer != None:

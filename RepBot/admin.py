@@ -103,7 +103,7 @@ def Action_cfg(bot, user, args):
 
 @Action("dump", "Dump database to a file")
 def Action_dump(bot, user, args):
-    bot.reps.dump()
+    bot.reps.save()
     bot.log("Rep file dumped")
 
 
@@ -130,7 +130,7 @@ def Action_clear(bot, user, args):
         bot.reps.reps = {}
     else:
         for name in args:
-            bot.reps.clear(name)
+            bot.reps.set(name, 0)
 
 
 @Action("tell", "Tell a channel rep information for users")
@@ -184,7 +184,6 @@ def Action_allow(bot, user, args):
 @Action("apply", "Apply the Python dictionary provided to the rep database")
 def Action_apply(bot, user, args):
     bot.reps.update(json.loads(" ".join(args)))
-
 
 @Action("term", "Safely terminate RepBot")
 def Action_term(bot, user, args):
