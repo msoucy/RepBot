@@ -223,13 +223,10 @@ def Action_autoreport(bot, user, args):
 @Action("report", "Generate a report")
 def Action_report(bot, user, args):
     user = get_channel_arg(user, args)
-    forceFlag = False
-    if args == ["force"]:
-        forceFlag = True
-    elif args:
+    if args:
         bot.msg(user, "Report failed: Too many arguments")
-        return
-    bot.msg(user, bot.reps.report(forceFlag))
+    else:
+        bot.msg(user, bot.reps.report())
 
 @Action("as", "Spoof a message as a user")
 def Action_as(bot, user, args):
