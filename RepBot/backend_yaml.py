@@ -13,7 +13,7 @@ class ReputationSystemYAML(ReputationInterface):
         self.reps = {}
         self.ignorelist = set()
         self.repfile = os.path.normpath(repfile)
-        self.load(self.repfile)
+        self.load()
         self.filter()
 
     #######################################################################################

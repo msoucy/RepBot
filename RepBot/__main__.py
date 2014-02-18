@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import yaml
 import time
 import re
 
@@ -11,60 +10,13 @@ from twisted.internet.task import LoopingCall
 from backend_yaml import ReputationSystemYAML
 from repcmds import get_rep_change
 import admin
+from config import Config
 
 def canonical_name(user):
     return re.split(r"[\|`:]", user)[0].lower()
 
 def ident_to_name(name):
     return name.split("!", 1)[0]
-
-def normalize_config(cfgFilename):
-    # Default settings
-    ret = {
-        "reps": "data/reps.txt",
-        "ignore": [],
-        "admins": [],
-        "replimit": 5,
-        "timelimit": 5.0 * 60.0,
-        "privonly": False,
-        "autorespond": False,
-        "nick": "RepBot",
-        "realname": "Reputation Bot",
-        "servname": "Reputation Bot",
-        "channels": [],
-        "server": "",
-        "port": 6667,
-        "ssl": False,
-        "spy": False,
-        "report": {
-            "channels": [],
-            "delay": 60*60
-        },
-        "savespeed": 3*60*60,
-        "topprivate": True
-    }
-    # Add the new stuff
-    ret.update(yaml.safe_load(open(cfgFilename)))
-    # Write the full config file, so they have a full listing
-    with open(cfgFilename,'w') as of:
-        yaml.dump(ret, of, default_flow_style=False)
-    # Fix set information
-    ret["ignore"] = sorted(set(ret["ignore"]))
-    ret["admins"] = sorted(set(ret["admins"]))
-    ret["report"]["channels"] = sorted(set(ret["report"]["channels"]))
-    ret["nick"] = ret["nick"].decode('ascii')
-    
-    def cleanup(item):
-        if isinstance(item, dict):
-            return {name:cleanup(val) for name, val in item.items()}
-        elif isinstance(item, list):
-            return [cleanup(x) for x in item]
-        elif isinstance(item, basestring):
-            return str(item)
-        else:
-            return item
-    return cleanup(ret)
-
 
 class RepBot(irc.IRCClient):
 
@@ -108,8 +60,7 @@ class RepBot(irc.IRCClient):
         if not self.changed: return
         self.changed = False
         self.reps.save()
-        with open("data/settings.txt", "w") as fi:
-            yaml.dump(cfg, fi, default_flow_style=False)
+        self.cfg.save()
         self.log("Saved data")
 
     def rebuild_wildcards(self):
@@ -243,7 +194,8 @@ class RepBotFactory(protocol.ClientFactory):
         print "Could not connect: %s" % (reason,)
 
 if __name__ == "__main__":
-    cfg = normalize_config("data/settings.txt")
+    #bot = ReputationBot(ReputationSystemYAML())
+    cfg = Config("data/settings.txt")
     server = cfg["server"]
     port = cfg["port"]
     factory = RepBotFactory(cfg)

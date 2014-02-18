@@ -2,7 +2,7 @@ import abc
 
 class SendingFrontend(object):
     'Abstract Frontend implementation'
-    def send_to(self, , msg):
+    def send_to(self, target, msg):
         raise NotImplementedError
     def send_help(self):
         raise NotImplementedError

@@ -5,9 +5,6 @@ import yaml
 import time
 import re
 
-import irc.bot
-import irc.strings
-
 from repsys import ReputationSystem
 from repcmds import get_rep_change
 import admin
