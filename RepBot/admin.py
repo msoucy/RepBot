@@ -35,22 +35,22 @@ def Action_help(bot, user, args):
         for arg in args:
             a = adminActions.get(arg)
             if a:
-                bot.msg(user, "{0}:\t{1}".format(a.name, a.helpmsg))
+                bot.send_to(user, "{0}:\t{1}".format(a.name, a.helpmsg))
     else:
-        bot.msg(
+        bot.send_to(
             user,
             " ".join(a for a in adminActions))
 
 
 @Action("verify", "Confirm admin access")
 def Action_verify(bot, user, args):
-    bot.msg(user, "Authentication valid")
+    bot.send_to(user, "Authentication valid")
 
 
 @Action("admin", "Adjust user admin access")
 def Action_admin(bot, user, args):
     if len(args) < 2 and args[0] != "list":
-        bot.msg(user, "Admin change failed: too few arguments")
+        bot.send_to(user, "Admin change failed: too few arguments")
         return
     cmd = args[0]
     args = args[1:]
@@ -59,16 +59,16 @@ def Action_admin(bot, user, args):
     elif cmd in ("remove", "rm"):
         bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) - set(args))
     elif cmd == "list":
-        bot.msg(user, str(list(bot.cfg["admins"])))
+        bot.send_to(user, str(list(bot.cfg["admins"])))
     else:
-        bot.msg(user, "Admin change failed: unknown action")
+        bot.send_to(user, "Admin change failed: unknown action")
     bot.rebuild_wildcards()
 
 
 @Action("ignore", "Adjust ignore list")
 def Action_ignore(bot, user, args):
     if len(args) < 1:
-        bot.msg(user, "Ignore change failed: too few arguments")
+        bot.send_to(user, "Ignore change failed: too few arguments")
         return
     cmd = args[0]
     args = args[1:]
@@ -77,15 +77,15 @@ def Action_ignore(bot, user, args):
     elif cmd in ("remove", "rm"):
         bot.cfg["ignore"] = sorted(set(bot.cfg["ignore"]) - set(args))
     elif cmd == "list":
-        bot.msg(user, str(list(bot.cfg["ignore"])))
+        bot.send_to(user, str(list(bot.cfg["ignore"])))
     else:
-        bot.msg(user, "Ignore change failed: unknown action")
+        bot.send_to(user, "Ignore change failed: unknown action")
     bot.rebuild_wildcards()
 
 @Action("cfg", "Control a config setting")
 def Action_cfg(bot, user, args):
     if len(args) == 1:
-        bot.msg(user, "{0} = {1}".format(args[0], bot.cfg.get(args[0])))
+        bot.send_to(user, "{0} = {1}".format(args[0], bot.cfg.get(args[0])))
     elif len(args) == 2:
         newval = literal_eval(args[1])
         if type(newval) == type(bot.cfg.get(args[0])):
@@ -99,7 +99,7 @@ def Action_cfg(bot, user, args):
         if type(newval) == type(bot.cfg["report"].get(args[1])):
             bot.cfg["report"][args[1]] = newval
     else:
-        bot.msg(user, "Invalid config setting change")
+        bot.send_to(user, "Invalid config setting change")
 
 @Action("dump", "Dump database to a file")
 def Action_dump(bot, user, args):
@@ -137,19 +137,19 @@ def Action_clear(bot, user, args):
 def Action_tell(bot, user, args):
     user = get_channel_arg(user, args)
     for name in args:
-        bot.msg(user, bot.reps.tell(name))
+        bot.send_to(user, bot.reps.tell(name))
 
 
 @Action("all", "Get all reputations")
 def Action_all(bot, user, args):
     user = get_channel_arg(user, args)
-    bot.msg(user, bot.reps.all())
+    bot.send_to(user, bot.reps.all())
 
 
 @Action("limit", "Adjust limits")
 def Action_limit(bot, user, args):
     if len(args) < 2:
-        bot.msg(user, "Limit change failed: too few arguments")
+        bot.send_to(user, "Limit change failed: too few arguments")
         return
     cmd = args[0]
     args = args[1:]
@@ -157,20 +157,20 @@ def Action_limit(bot, user, args):
         if args:
             bot.cfg["replimit"] = int(args[0])
         else:
-            bot.msg(user, "Rep limit: {0}".format(bot.cfg["replimit"]))
+            bot.send_to(user, "Rep limit: {0}".format(bot.cfg["replimit"]))
     elif cmd == "time":
         if args:
             bot.cfg["timelimit"] = int(args[0])
         else:
-            bot.msg(user, "Time limit: {0}".format(bot.cfg["timelimit"]))
+            bot.send_to(user, "Time limit: {0}".format(bot.cfg["timelimit"]))
     else:
-        bot.msg(user, "Limit change failed: unknown limit")
+        bot.send_to(user, "Limit change failed: unknown limit")
 
 
 @Action("set", "Manually set a user's rep value")
 def Action_set(bot, user, args):
     if len(args) != 2:
-        bot.msg(user, "Set failed: incorrect number of arguments")
+        bot.send_to(user, "Set failed: incorrect number of arguments")
     else:
         bot.reps.set(args[0], args[1])
 
@@ -224,22 +224,22 @@ def Action_autoreport(bot, user, args):
 def Action_report(bot, user, args):
     user = get_channel_arg(user, args)
     if args:
-        bot.msg(user, "Report failed: Too many arguments")
+        bot.send_to(user, "Report failed: Too many arguments")
     else:
-        bot.msg(user, bot.reps.report())
+        bot.send_to(user, bot.reps.report())
 
 @Action("as", "Spoof a message as a user")
 def Action_as(bot, user, args):
     if len(args)<2:
-        bot.msg(user, "as failed: Not enough information")
-        return
-    bot.privmsg(args[0],args[0]," ".join(args[1:]))
+        bot.send_to(user, "as failed: Not enough information")
+    else:
+        bot.privmsg(args[0],args[0]," ".join(args[1:]))
 
 @Action("say", "Say a message")
 def Action_say(bot, user, args):
     if len(args) < 2:
-        bot.msg(user, "Not enough arguments")
-    bot.msg(args[0], " ".join(args[1:]))
+        bot.send_to(user, "Not enough arguments")
+    bot.send_to(args[0], " ".join(args[1:]))
 
 def admin(bot, user, msg):
     if not msg.strip():
