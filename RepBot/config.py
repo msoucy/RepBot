@@ -13,7 +13,7 @@ class Config(object):
     def __getitem__(self, name):
         return self._data[name]
 
-    def __getitem__(self, name):
+    def __getattr__(self, name):
         if name.startswith('_'):
             return super(Config, self).__getattr__(name, value)
         else: return self._data[name]

@@ -19,15 +19,14 @@ def ident_to_name(name):
 class RepBot(irc.IRCClient):
 
     def __init__(self, cfg, bot):
-        self.version = "0.12.0"
+        self.version = "0.13.0"
         self.cfg = cfg
 
         self.users = {}
-        self.reps = ReputationSystemYAML(cfg["reps"])
 
         # Instance variables for irc.IRCClient
-        self.nickname = cfg["nick"]
-        self.realname = cfg["realname"]
+        self.nickname = cfg.nick
+        self.realname = cfg.realname
         self.sourceURL = "http://github.com/msoucy/RepBot"
         self.versionName = "RepBot"
         self.versionNum = self.version
@@ -35,12 +34,12 @@ class RepBot(irc.IRCClient):
         self.rebuild_wildcards()
         self.changed = False
         self.saver = LoopingCall(self.save)
-        self.saver.start(self.cfg["savespeed"])
+        self.saver.start(self.cfg.savespeed)
 
         self.bot = bot
 
     def signedOn(self):
-        print "Signed on as {0}.".format(self.cfg["nick"])
+        print "Signed on as {0}.".format(self.nickname)
         for chan in self.cfg["channels"]:
             self.join(chan)
 
@@ -58,7 +57,6 @@ class RepBot(irc.IRCClient):
     def save(self):
         if not self.changed: return
         self.changed = False
-        self.reps.save()
         self.cfg.save()
         self.log("Saved data")
 
@@ -67,8 +65,8 @@ class RepBot(irc.IRCClient):
             return w.replace('.','\\.').replace('?','.').replace('*','.*?')
         def regex_list(l):
             return [re.compile(wildcard_regex(x)) for x in l]
-        self.adminList = regex_list(self.cfg["admins"])
-        self.ignoreList = regex_list(self.cfg["ignore"])
+        self.adminList = regex_list(self.cfg.admins)
+        self.ignoreList = regex_list(self.cfg.ignore)
 
     def hasadmin(self, user):
         return any(u.match(user) for u in self.adminList)
@@ -81,23 +79,23 @@ class RepBot(irc.IRCClient):
         # Filter old uses
         self.users[user] = [val
                             for val in self.users.get(user, [])
-                            if (currtime - val) < self.cfg["timelimit"]]
-        if len(self.users[user]) < self.cfg["replimit"]:
+                            if (currtime - val) < self.cfg.timelimit]
+        if len(self.users[user]) < self.cfg.replimit:
             self.bot.handle(self, user, changer)
             self.users[user].append(currtime)
             self.changed = True
         else:
-            self.msg(user, "You have reached your rep limit. You can give more rep in {0} seconds"
-                     .format(int(self.cfg["timelimit"] - (currtime - self.users[user][-1]))))
+            self.send_to(user, "You have reached your rep limit. You can give more rep in {0} seconds"
+                     .format(int(self.cfg.timelimit - (currtime - self.users[user][-1]))))
 
     def report(self, chan):
-        admin.admin(self, chan, "report force")
+        admin.admin(self, chan, "report")
 
-    def send_to(self, *args, **kwargs):
-        return self.msg(*args, **kwargs)
+    def send_to(self, dest, *args, **kwargs):
+        return self.msg(dest, *[a.encode("utf-8") for a in args], **kwargs)
 
     def send_help(self, user):
-        send = lambda msg: self.send_to(replyto, msg)
+        send = lambda msg: self.send_to(user, msg)
         send('Message me with "!rep <name>" to get the reputation of <name>')
         send('Use prefix or postfix ++/-- to change someone\'s rep.')
         send('You are not able to change your own rep.')
@@ -119,10 +117,10 @@ class RepBot(irc.IRCClient):
         if msg.startswith('!'):
             # It's a command to RepBot itself
             msg = msg[1:]
-        elif channel != self.cfg["nick"] and msg.startswith(self.cfg["nick"] + ":"):
+        elif channel != self.nickname and msg.startswith(self.nickname + ":"):
             # It's a command to RepBot itself
-            msg = msg[len(self.cfg["nick"]) + 1:].strip()
-        elif self.hasadmin(ident) and channel == self.cfg["nick"]:
+            msg = msg[len(self.nickname) + 1:].strip()
+        elif self.hasadmin(ident) and channel == self.nickname:
             # They have admin access, check for commands
             if msg.startswith("admin"):
                 msg = msg.replace("admin", "", 1)
@@ -141,15 +139,15 @@ class RepBot(irc.IRCClient):
                 user,
                 "You have been blocked from utilizing my functionality.")
 
-        if self.cfg["spy"]:
+        if self.cfg.spy:
             self.log("[{0}]\t{1}:\t{2}".format(channel, ident, msg))
 
         if isAdmin:
             admin.admin(self, user, msg)
-        elif channel == self.cfg["nick"] or not self.cfg["privonly"]:
+        elif channel == self.nickname or not self.cfg.privonly:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
-            self.bot.repcmd(self, user, msg, channel if channel != self.cfg["nick"] else None)
+            self.bot.repcmd(self, user, msg, channel if channel != self.nickname else None)
 
 
 class RepBotFactory(protocol.ClientFactory):
@@ -170,12 +168,12 @@ class RepBotFactory(protocol.ClientFactory):
 
 if __name__ == "__main__":
     cfg = Config("data/settings.txt")
-    bot = ReputationBot(ReputationSystemYAML(cfg["reps"]))
-    server = cfg["server"]
-    port = cfg["port"]
+    bot = ReputationBot(ReputationSystemYAML(cfg.reps))
+    server = cfg.server
+    port = cfg.port
     factory = RepBotFactory(cfg, bot)
     print "Connecting to {0}:{1}".format(server, port)
-    if cfg["ssl"]:
+    if cfg.ssl:
         print "Using SSL"
         reactor.connectSSL(server, port, factory, ssl.ClientContextFactory())
     else:
