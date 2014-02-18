@@ -8,25 +8,22 @@ from twisted.internet import protocol, reactor, ssl
 from twisted.internet.task import LoopingCall
 
 from backend_yaml import ReputationSystemYAML
+from .ReputationBot import ReputationBot
 from repcmds import get_rep_change
 import admin
 from config import Config
-
-def canonical_name(user):
-    return re.split(r"[\|`:]", user)[0].lower()
 
 def ident_to_name(name):
     return name.split("!", 1)[0]
 
 class RepBot(irc.IRCClient):
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, bot):
         self.version = "0.12.0"
         self.cfg = cfg
 
         self.users = {}
         self.reps = ReputationSystemYAML(cfg["reps"])
-        self.loops = {}
 
         # Instance variables for irc.IRCClient
         self.nickname = cfg["nick"]
@@ -39,6 +36,8 @@ class RepBot(irc.IRCClient):
         self.changed = False
         self.saver = LoopingCall(self.save)
         self.saver.start(self.cfg["savespeed"])
+
+        self.bot = bot
 
     def signedOn(self):
         print "Signed on as {0}.".format(self.cfg["nick"])
@@ -77,18 +76,14 @@ class RepBot(irc.IRCClient):
     def ignores(self, user):
         return any(u.match(user) for u in self.ignoreList)
 
-    def handleChange(self, user, changer):
-        name = changer.getUser()
-        if name == canonical_name(user):
-            self.msg(user, "Cannot change own rep")
-            return
+    def handle(self, user, changer):
         currtime = time.time()
         # Filter old uses
         self.users[user] = [val
                             for val in self.users.get(user, [])
                             if (currtime - val) < self.cfg["timelimit"]]
         if len(self.users[user]) < self.cfg["replimit"]:
-            self.reps.apply(changer)
+            self.bot.handle(self, user, changer)
             self.users[user].append(currtime)
             self.changed = True
         else:
@@ -98,39 +93,18 @@ class RepBot(irc.IRCClient):
     def report(self, chan):
         admin.admin(self, chan, "report force")
 
-    def repcmd(self, user, channel, msg):
-        # Respond to private messages privately
-        if channel == self.cfg["nick"]:
-            channel = user
+    def send_to(self, *args, **kwargs):
+        return self.msg(*args, **kwargs)
 
-        args = msg.split()
-        cmd = (args[0], args[1:]) if args else ("", [])
-        changer = get_rep_change(msg)
+    def send_help(self, user):
+        send = lambda msg: self.send_to(replyto, msg)
+        send('Message me with "!rep <name>" to get the reputation of <name>')
+        send('Use prefix or postfix ++/-- to change someone\'s rep.')
+        send('You are not able to change your own rep.')
+        send('Message me with "!version" to see my version number')
 
-        if changer != None:
-            self.handleChange(user, changer)
-        elif cmd in ("rep",):
-            self.msg(channel, self.reps.tell(canonical_name(args[0] if args else user)))
-        elif cmd in ("top", "report"):
-            self.msg(user if self.cfg["topprivate"] else channel, self.reps.report(True))
-        elif cmd in ("ver", "version", "about"):
-            self.msg(channel, 'I am RepBot version {0}'.format(self.version))
-        elif cmd in ("help",):
-            self.msg(
-                channel,
-                'Message me with "!rep <name>" to get the reputation of <name>')
-            self.msg(
-                channel,
-                'Use prefix or postfix ++/-- to change someone\'s rep. You are not able to change your own rep.')
-            self.msg(
-                channel,
-                'Message me with "!version" to see my version number')
-        elif self.cfg["autorespond"] and channel == user:
-            # It's not a valid command, so let them know
-            # Only respond privately
-            self.msg(
-                user,
-                'Invalid command. MSG me with !help for information')
+    def canonical_name(self, user):
+        return re.split(r"[\|`:]", user)[0].lower()
 
     def privmsg(self, ident, channel, msg):
         if not ident:
@@ -175,16 +149,17 @@ class RepBot(irc.IRCClient):
         elif channel == self.cfg["nick"] or not self.cfg["privonly"]:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
-            self.repcmd(user, channel, msg)
+            self.bot.repcmd(self, user, msg, channel if channel != self.cfg["nick"] else None)
 
 
 class RepBotFactory(protocol.ClientFactory):
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, bot):
         self.cfg = cfg
+        self.bot = bot
 
     def buildProtocol(self, addr):
-        return RepBot(self.cfg)
+        return RepBot(self.cfg, self.bot)
 
     def clientConnectionLost(self, connector, reason):
         print "Lost connection (%s), reconnecting." % (reason,)
@@ -194,11 +169,11 @@ class RepBotFactory(protocol.ClientFactory):
         print "Could not connect: %s" % (reason,)
 
 if __name__ == "__main__":
-    #bot = ReputationBot(ReputationSystemYAML())
     cfg = Config("data/settings.txt")
+    bot = ReputationBot(ReputationSystemYAML(cfg["reps"]))
     server = cfg["server"]
     port = cfg["port"]
-    factory = RepBotFactory(cfg)
+    factory = RepBotFactory(cfg, bot)
     print "Connecting to {0}:{1}".format(server, port)
     if cfg["ssl"]:
         print "Using SSL"

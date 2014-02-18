@@ -5,7 +5,6 @@ import yaml
 import time
 import re
 
-from repsys import ReputationSystem
 from repcmds import get_rep_change
 import admin
 
@@ -21,12 +20,12 @@ class ReputationBot:
     def save(self):
         self.repsys.save()
 
-    def handleChange(self, frontend, user, changer):
+    def handle(self, frontend, user, changer):
         name = changer.getUser()
-        if name == canonical_name(user):
+        if name == frontend.canonical_name(user):
             frontend.sendto(user, "Cannot change own rep")
         else:
-            self.repsys.handleChange(frontend, user, changer)
+            self.repsys.apply(changer)
 
     def admin(self, source, cmd):
         admin.admin(self, source, cmd)
@@ -34,6 +33,7 @@ class ReputationBot:
     def repcmd(self, frontend, source, msg, replyto=None):
 
         replyto = replyto or source
+        #print("Source: {}\nReply: {}\nMessage: {}".format(source, replyto, msg))
 
         args = msg.split()
         cmd, args = (args[0], args[1:]) if args else ("",[])
@@ -41,17 +41,17 @@ class ReputationBot:
         send = lambda msg: frontend.send_to(replyto, msg)
 
         if changer:
-            self.repsys.handleChange(frontend, source, changer)
+            self.frontend.handle(source, changer)
         elif cmd in ("rep",):
-            name = canonical_name(args[0] if args else source)
+            name = frontend.canonical_name(args[0] if args else source)
             send("Rep for {0}: {1}".format(name, self.repsys.get(name)))
         elif cmd in ("top", "report"):
-            send(self.reps.report())
+            send(self.repsys.report())
         elif cmd in ("ver", "version", "about"):
             send('I am RepBot version {0}'.format(self.version))
         elif cmd in ("help",):
             frontend.send_help(replyto)
-        elif self.cfg["autorespond"] and channel == user:
+        elif channel == user:
             # It's not a valid command, so let them know
             # Only respond privately
             send('Invalid command. MSG me with !help for information')
