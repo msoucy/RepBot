@@ -11,35 +11,47 @@ def get_channel_arg(channel, args):
     return channel
 
 
-adminActions = {}
 
+class ActionHelper():
+    def __init__(self):
+        self._actions = {}
 
-def Action(name, helpmsg):
-    class ActionClass(object):
-        __slots__ = ('name', 'helpmsg', 'cmd')
+    def __call__(helper, name, helpmsg):
+        class ActionClass(object):
+            __slots__ = ('name', 'helpmsg', 'cmd')
 
-        def __init__(self, f):
-            self.name = name
-            self.helpmsg = helpmsg
-            self.cmd = f
-            adminActions[name] = self
+            def __init__(self, f):
+                self.name = name
+                self.helpmsg = helpmsg
+                self.cmd = f
+                helper._actions[name] = self
 
-        def __call__(self, *args, **kwargs):
-            return self.cmd(*args, **kwargs)
-    return ActionClass
+            def __call__(self, *args, **kwargs):
+                return self.cmd(*args, **kwargs)
+
+        return ActionClass
+
+    def __getitem__(self, name):
+        return self._actions[name]
+
+    def __iter__(self):
+        return self._actions.__iter__()
+
+Action = ActionHelper()
+
 
 
 @Action("help", "List command help")
 def Action_help(bot, user, args):
     if args:
         for arg in args:
-            a = adminActions.get(arg)
+            a = Action[arg]
             if a:
                 bot.send_to(user, "{0}:\t{1}".format(a.name, a.helpmsg))
     else:
         bot.send_to(
             user,
-            " ".join(a for a in adminActions))
+            " ".join(a for a in Action))
 
 
 @Action("verify", "Confirm admin access")
@@ -246,7 +258,7 @@ def admin(bot, user, msg):
         return
     command = msg.split()[0].lower()
     args = msg.split()[1:]
-    action = adminActions.get(command)
+    action = Action[command]
     if action:
         action(bot, user, args)
     else:
