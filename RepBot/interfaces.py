@@ -1,10 +1,14 @@
 import abc
 
-class SendingFrontend(object):
+class Frontend(object):
     'Abstract Frontend implementation'
     def send_to(self, target, msg):
         raise NotImplementedError
     def send_help(self):
+        raise NotImplementedError
+    def send_rep(self, target, name, rep):
+        raise NotImplementedError
+    def send_report(self, target, reps):
         raise NotImplementedError
 
 class ReputationInterface(object):
