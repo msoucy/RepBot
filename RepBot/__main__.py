@@ -7,11 +7,11 @@ from twisted.words.protocols import irc
 from twisted.internet import protocol, reactor, ssl
 from twisted.internet.task import LoopingCall
 
-from backend_yaml import ReputationSystemYAML
+from .backend_yaml import ReputationSystemYAML
 from .ReputationBot import ReputationBot
-from repcmds import get_rep_change
-import admin
-from config import Config
+from .repcmds import get_rep_change
+from .admin import admin, get_command
+from .config import Config
 
 def ident_to_name(name):
     return name.split("!", 1)[0]
@@ -45,7 +45,7 @@ class RepBot(irc.IRCClient):
 
     def irc_unknown(self, prefix, command, params):
         if command == "INVITE":
-            self.log("Invite to {1} from {0}".format(prefix, params[1]))
+            self.log(u"Invite to {1} from {0}".format(prefix, params[1]))
             self.join(params[1])
 
     def joined(self, channel):
@@ -89,7 +89,7 @@ class RepBot(irc.IRCClient):
                      .format(int(self.cfg.timelimit - (currtime - self.users[user][-1]))))
 
     def report(self, chan):
-        admin.admin(self, chan, "report")
+        admin(self, chan, "report")
 
     def send_to(self, dest, *args, **kwargs):
         return self.msg(dest, *[a.encode("utf-8") for a in args], **kwargs)
@@ -113,7 +113,7 @@ class RepBot(irc.IRCClient):
         except UnicodeDecodeError as ue:
             self.log("Received non-unicode message")
             return
-        isAdmin = False
+        admincmd = None
         if msg.startswith('!'):
             # It's a command to RepBot itself
             msg = msg[1:]
@@ -122,13 +122,7 @@ class RepBot(irc.IRCClient):
             msg = msg[len(self.nickname) + 1:].strip()
         elif self.hasadmin(ident) and channel == self.nickname:
             # They have admin access, check for commands
-            if msg.startswith("admin"):
-                msg = msg.replace("admin", "", 1)
-            elif msg.startswith("@"):
-                msg = msg[1:]
-            else:
-                return
-            isAdmin = True
+            admincmd = get_command(msg)
         elif get_rep_change(msg) == None:
             # It doesn't match a rep change
             return
@@ -140,10 +134,10 @@ class RepBot(irc.IRCClient):
                 "You have been blocked from utilizing my functionality.")
 
         if self.cfg.spy:
-            self.log("[{0}]\t{1}:\t{2}".format(channel, ident, msg))
+            self.log(u"[{0}]\t{1}:\t{2}".format(channel, ident, msg))
 
-        if isAdmin:
-            admin.admin(self, user, msg)
+        if admincmd:
+            admin(self, user, admincmd)
         elif channel == self.nickname or not self.cfg.privonly:
             # I'm just picking up a regular chat
             # And we aren't limited to private messages only
