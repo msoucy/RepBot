@@ -2,6 +2,8 @@
 
 from ast import literal_eval
 import json
+import re
+from fuf import ActionSet
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 
@@ -11,160 +13,136 @@ def get_channel_arg(channel, args):
     return channel
 
 
-
-class ActionHelper():
-    def __init__(self):
-        self._actions = {}
-
-    def __call__(helper, name, helpmsg):
-        class ActionClass(object):
-            __slots__ = ('name', 'helpmsg', 'cmd')
-
-            def __init__(self, f):
-                self.name = name
-                self.helpmsg = helpmsg
-                self.cmd = f
-                helper._actions[name] = self
-
-            def __call__(self, *args, **kwargs):
-                return self.cmd(*args, **kwargs)
-
-        return ActionClass
-
-    def __getitem__(self, name):
-        return self._actions[name]
-
-    def __iter__(self):
-        return self._actions.__iter__()
-
-Action = ActionHelper()
+Action = ActionSet("Action_")
 
 
 
-@Action("help", "List command help")
-def Action_help(bot, user, args):
-    if args:
-        for arg in args:
+@Action
+def Action_help(bot, user, *cmds):
+    """List command help"""
+    if cmds:
+        for cmds in cmds:
             a = Action[arg]
             if a:
-                bot.send_to(user, "{0}:\t{1}".format(a.name, a.helpmsg))
+                bot.send_to(user, "{0.name}:\t{0.helpmsg}".format(a))
     else:
-        bot.send_to(
-            user,
-            " ".join(a for a in Action))
+        bot.send_to(user, " ".join(a for a in Action))
 
 
-@Action("verify", "Confirm admin access")
-def Action_verify(bot, user, args):
+@Action
+def Action_verify(bot, user):
+    """Confirm admin access"""
     bot.send_to(user, "Authentication valid")
 
 
-@Action("admin", "Adjust user admin access")
-def Action_admin(bot, user, args):
-    if len(args) < 2 and args[0] != "list":
+@Action
+def Action_admin(bot, user, cmd, *args):
+    """Adjust user admin access"""
+    if cmd == "list":
+        bot.send_to(user, str(list(bot.cfg["admins"])))
+    elif not args:
         bot.send_to(user, "Admin change failed: too few arguments")
-        return
-    cmd = args[0]
-    args = args[1:]
-    if cmd == "add":
+    elif cmd == "add":
         bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) | set(args))
     elif cmd in ("remove", "rm"):
         bot.cfg["admins"] = sorted(set(bot.cfg["admins"]) - set(args))
-    elif cmd == "list":
-        bot.send_to(user, str(list(bot.cfg["admins"])))
     else:
         bot.send_to(user, "Admin change failed: unknown action")
     bot.rebuild_wildcards()
 
 
-@Action("ignore", "Adjust ignore list")
-def Action_ignore(bot, user, args):
-    if len(args) < 1:
-        bot.send_to(user, "Ignore change failed: too few arguments")
-        return
-    cmd = args[0]
-    args = args[1:]
-    if cmd == "add":
-        bot.cfg["ignore"] = sorted(set(bot.cfg["ignore"]) | set(args))
+@Action
+def Action_ignore(bot, user, cmd, *args):
+    """Adjust ignore list"""
+    if cmd == "list":
+        bot.send_to(user, str(list(bot.cfg["ignores"])))
+    elif not args:
+        bot.send_to(user, "Admin change failed: too few arguments")
+    elif cmd == "add":
+        bot.cfg["ignores"] = sorted(set(bot.cfg["ignores"]) | set(args))
     elif cmd in ("remove", "rm"):
-        bot.cfg["ignore"] = sorted(set(bot.cfg["ignore"]) - set(args))
-    elif cmd == "list":
-        bot.send_to(user, str(list(bot.cfg["ignore"])))
+        bot.cfg["ignores"] = sorted(set(bot.cfg["ignores"]) - set(args))
     else:
         bot.send_to(user, "Ignore change failed: unknown action")
     bot.rebuild_wildcards()
 
-@Action("cfg", "Control a config setting")
-def Action_cfg(bot, user, args):
-    if len(args) == 1:
-        bot.send_to(user, "{0} = {1}".format(args[0], bot.cfg.get(args[0])))
-    elif len(args) == 2:
+@Action
+def Action_cfg(bot, user, setting, *args):
+    """Control a config setting"""
+    if args:
+        bot.send_to(user, "{0} = {1}".format(setting, bot.cfg.get(setting)))
+    elif len(args) == 1:
         newval = literal_eval(args[1])
-        if type(newval) == type(bot.cfg.get(args[0])):
-            bot.cfg[args[0]] = newval
+        if type(newval) == type(bot.cfg.get(setting)):
+            bot.cfg[setting] = newval
         # I know, a sad little hack for now.
-        if args[0] == "savespeed":
+        if setting == "savespeed":
             bot.saver.stop()
             bot.saver.start(newval)
-    elif args[0] == "report" and len(args) == 3:
-        newval = literal_eval(args[2])
-        if type(newval) == type(bot.cfg["report"].get(args[1])):
-            bot.cfg["report"][args[1]] = newval
+    elif setting == "report" and len(args) == 2:
+        newval = literal_eval(args[1])
+        if type(newval) == type(bot.cfg["report"].get(args[0])):
+            bot.cfg["report"][args[0]] = newval
     else:
         bot.send_to(user, "Invalid config setting change")
 
-@Action("dump", "Dump database to a file")
-def Action_dump(bot, user, args):
+@Action
+def Action_dump(bot, user):
     bot.reps.save()
     bot.log("Rep file dumped")
 
 
-@Action("save", "Save all bot information")
-def Action_save(bot, user, args):
+@Action
+def Action_save(bot, user):
+    """Save all bot information"""
     bot.save()
 
 
-@Action("load", "Load database from a file")
-def Action_load(bot, user, args):
+@Action
+def Action_load(bot, user):
+    """Load database from a file"""
     bot.reps.load()
     bot.log("Rep file loaded")
 
 
-@Action("filter", "Remove unused entries")
-def Action_filter(bot, user, args):
+@Action
+def Action_filter(bot, user):
+    """Remove unused entries"""
     bot.reps.filter()
     bot.log("Filtered zeroed entries")
 
 
-@Action("clear", "Remove the given names from the system")
-def Action_clear(bot, user, args):
-    if len(args) == 1 and args[0] == "all":
+@Action
+def Action_clear(bot, user, *args):
+    """Remove the given names from the system"""
+    if args == ["all"]:
         bot.reps.reps = {}
     else:
         for name in args:
             bot.reps.set(name, 0)
 
 
-@Action("tell", "Tell a channel rep information for users")
-def Action_tell(bot, user, args):
+@Action
+def Action_tell(bot, user, *args):
+    """Tell a channel rep information for users"""
     user = get_channel_arg(user, args)
     for name in args:
         bot.send_to(user, bot.reps.tell(name))
 
 
-@Action("all", "Get all reputations")
-def Action_all(bot, user, args):
-    user = get_channel_arg(user, args)
+@Action
+def Action_all(bot, user, dest=None):
+    """Get all reputations"""
+    dest = dest or user
     bot.send_to(user, bot.reps.all())
 
 
-@Action("limit", "Adjust limits")
-def Action_limit(bot, user, args):
+@Action
+def Action_limit(bot, user, cmd, *args):
+    """Adjust limits"""
     if len(args) < 2:
         bot.send_to(user, "Limit change failed: too few arguments")
         return
-    cmd = args[0]
-    args = args[1:]
     if cmd == "rep":
         if args:
             bot.cfg["replimit"] = int(args[0])
@@ -179,49 +157,48 @@ def Action_limit(bot, user, args):
         bot.send_to(user, "Limit change failed: unknown limit")
 
 
-@Action("set", "Manually set a user's rep value")
-def Action_set(bot, user, args):
-    if len(args) != 2:
-        bot.send_to(user, "Set failed: incorrect number of arguments")
-    else:
-        bot.reps.set(args[0], args[1])
+@Action
+def Action_set(bot, user, nick, value):
+    """Manually set a user's rep value"""
+    bot.reps.set(nick, int(value))
 
 
-@Action("allow", "Clear rep timeout restrictions for all given users")
-def Action_allow(bot, user, args):
+@Action
+def Action_allow(bot, user, *args):
+    """Clear rep timeout restrictions for all given users"""
     for name in args:
         bot.users[name] = []
 
 
-@Action("apply", "Apply the Python dictionary provided to the rep database")
-def Action_apply(bot, user, args):
-    bot.reps.update(json.loads(" ".join(args)))
-
-@Action("term", "Safely terminate RepBot")
-def Action_term(bot, user, args):
+@Action
+def Action_term(bot, user, *msg):
+    """Safely terminate"""
     bot.save()
     for chan in bot.cfg["channels"]:
         bot.leave(chan, " ".join(args))
-    bot.quit(" ".join(args))
+    bot.quit(" ".join(msg))
     reactor.stop()
 
 
-@Action("join", "Join a channel")
-def Action_join(bot, user, args):
-    for chan in args:
+@Action
+def Action_join(bot, user, *chans):
+    """Join a channel"""
+    for chan in chans:
         bot.join(chan)
         bot.cfg["channels"].append(chan)
     bot.cfg["channels"] = sorted(set(bot.cfg["channels"]))
 
 
-@Action("part", "Leave a channel")
-def Action_part(bot, user, args):
-    for chan in args:
+@Action
+def Action_part(bot, user, *chars):
+    """Leave a channel"""
+    for chan in chars:
         bot.leave(chan)
         bot.cfg["channels"].remove(chan)
 
-@Action("autoreport", "Automatically report to a channel")
+@Action
 def Action_autoreport(bot, user, args):
+    """Automatically report to a channel"""
     channels = bot.cfg["report"]["channels"]
     for chan in args:
         if chan in bot.loops:
@@ -232,35 +209,37 @@ def Action_autoreport(bot, user, args):
             bot.loops[chan].start(bot.cfg["report"]["delay"])
             channels.append(chan)
 
-@Action("report", "Generate a report")
-def Action_report(bot, user, args):
-    user = get_channel_arg(user, args)
-    if args:
-        bot.send_to(user, "Report failed: Too many arguments")
-    else:
-        bot.send_to(user, bot.reps.report())
+@Action
+def Action_report(bot, user, dest=None):
+    """Generate a report"""
+    bot.send_to(dest or user, bot.reps.report())
 
-@Action("as", "Spoof a message as a user")
-def Action_as(bot, user, args):
-    if len(args)<2:
+@Action
+def Action_as(bot, user, fakeuser, *cmd):
+    """Spoof a message as a user"""
+    if not args:
         bot.send_to(user, "as failed: Not enough information")
     else:
-        bot.privmsg(args[0],args[0]," ".join(args[1:]))
+        bot.privmsg(fakeuser,fakeuser," ".join(cmd))
 
-@Action("say", "Say a message")
-def Action_say(bot, user, args):
-    if len(args) < 2:
+@Action
+def Action_say(bot, user, dest, *msg):
+    """Say a message"""
+    if not args:
         bot.send_to(user, "Not enough arguments")
-    bot.send_to(args[0], " ".join(args[1:]))
+    bot.send_to(dest, " ".join(msg))
 
-def admin(bot, user, msg):
-    if not msg.strip():
-        return
-    command = msg.split()[0].lower()
-    args = msg.split()[1:]
-    action = Action[command]
-    if action:
-        action(bot, user, args)
+def get_command():
+    _regex = re.compile(r'''^(@|(?:admin\s+))(?:!(?P<module>[a-zA-Z_]\w*))?\s*(?P<cmd>\S+)\s*(?P<args>.*)$''')
+    return lambda msg: _regex.match(msg).groupdict()
+get_command = get_command()
+
+def admin(bot, user, command):
+    cmd = command["cmd"]
+    args = command["args"]
+    if cmd in Action:
+        try: Action[cmd](bot, user, *(args.split()))
+        except: bot.send_to(user, "Can't run that admin command with those arguments")
     else:
         print "Invalid command {0}".format(command)
 
