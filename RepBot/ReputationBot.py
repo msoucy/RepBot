@@ -23,7 +23,7 @@ class ReputationBot:
     def handle(self, frontend, user, changer):
         name = changer.getUser()
         if name == frontend.canonical_name(user):
-            frontend.sendto(user, "Cannot change own rep")
+            frontend.send_to(user, "Cannot change own rep")
         else:
             self.repsys.apply(changer)
 
@@ -33,7 +33,6 @@ class ReputationBot:
     def repcmd(self, frontend, source, msg, replyto=None):
 
         replyto = replyto or source
-        #print("Source: {}\nReply: {}\nMessage: {}".format(source, replyto, msg))
 
         args = msg.split()
         cmd, args = (args[0], args[1:]) if args else ("",[])
@@ -41,7 +40,7 @@ class ReputationBot:
         send = lambda msg: frontend.send_to(replyto, msg)
 
         if changer:
-            self.frontend.handle(source, changer)
+            frontend.handle(source, changer)
         elif cmd in ("rep",):
             name = frontend.canonical_name(args[0] if args else source)
             send("Rep for {0}: {1}".format(name, self.repsys.get(name)))
