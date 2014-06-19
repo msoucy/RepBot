@@ -50,7 +50,7 @@ class ReputationBot:
             send('I am RepBot version {0}'.format(self.version))
         elif cmd in ("help",):
             frontend.send_help(replyto)
-        elif channel == user:
+        elif source == replyto:
             # It's not a valid command, so let them know
             # Only respond privately
             send('Invalid command. MSG me with !help for information')

@@ -160,7 +160,7 @@ def Action_limit(bot, user, cmd, *args):
 @Action
 def Action_set(bot, user, nick, value):
     """Manually set a user's rep value"""
-    bot.reps.set(nick, int(value))
+    bot.bot.repsys.set(nick, int(value))
 
 
 @Action
@@ -175,7 +175,7 @@ def Action_term(bot, user, *msg):
     """Safely terminate"""
     bot.save()
     for chan in bot.cfg["channels"]:
-        bot.leave(chan, " ".join(args))
+        bot.leave(chan, " ".join(msg))
     bot.quit(" ".join(msg))
     reactor.stop()
 
@@ -217,7 +217,7 @@ def Action_report(bot, user, dest=None):
 @Action
 def Action_as(bot, user, fakeuser, *cmd):
     """Spoof a message as a user"""
-    if not args:
+    if not cmd:
         bot.send_to(user, "as failed: Not enough information")
     else:
         bot.privmsg(fakeuser,fakeuser," ".join(cmd))
@@ -225,13 +225,18 @@ def Action_as(bot, user, fakeuser, *cmd):
 @Action
 def Action_say(bot, user, dest, *msg):
     """Say a message"""
-    if not args:
+    if not msg:
         bot.send_to(user, "Not enough arguments")
     bot.send_to(dest, " ".join(msg))
 
-def get_command():
-    _regex = re.compile(r'''^(@|(?:admin\s+))(?:!(?P<module>[a-zA-Z_]\w*))?\s*(?P<cmd>\S+)\s*(?P<args>.*)$''')
-    return lambda msg: _regex.match(msg).groupdict()
+class get_command(object):
+    def __init__(self):
+        self.reg = re.compile(r'^(@|(?:admin\s+))(?:!(?P<module>[a-zA-Z_]\w*))?\s*(?P<cmd>\S+)\s*(?P<args>.*)$')
+    def __call__(self, msg):
+        mat = self.reg.match(msg)
+        if mat:
+            return mat.groupdict()
+        return None
 get_command = get_command()
 
 def admin(bot, user, command):
@@ -239,7 +244,9 @@ def admin(bot, user, command):
     args = command["args"]
     if cmd in Action:
         try: Action[cmd](bot, user, *(args.split()))
-        except: bot.send_to(user, "Can't run that admin command with those arguments")
+        except:
+            bot.send_to(user, "Can't run that admin command with arguments: {}".format(args.split()))
+            raise
     else:
         print "Invalid command {0}".format(command)
 
